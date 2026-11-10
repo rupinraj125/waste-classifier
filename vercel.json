@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/classify.py": {
+      "memory": 1024,
+      "maxDuration": 30,
+      "includeFiles": "api/_model/**"
+    },
+    "api/chat.py": { "maxDuration": 30 },
+    "api/tts.py": { "maxDuration": 30 }
+  }
+}
