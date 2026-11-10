@@ -15,16 +15,12 @@
     --compost:#8A6A34; --compost-t:#F4ECDE;
     --hazard:#CE3A2E;  --hazard-t:#FBE7E5;
     --landfill:#59636E;--landfill-t:#ECEEF1;
-    --ok:#2E7D32;
     --accent:var(--recycle); --accent-t:var(--recycle-t);
-    --sans:"Inter",system-ui,sans-serif;
-    --display:"Bricolage Grotesque","Inter",system-ui,sans-serif;
+    --sans:"Inter",system-ui,sans-serif; --display:"Bricolage Grotesque","Inter",system-ui,sans-serif;
     --shadow:0 10px 30px rgba(20,26,22,.10);
   }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--paper); color:var(--ink); font-family:var(--sans); line-height:1.5;
-    -webkit-font-smoothing:antialiased;
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--paper); color:var(--ink); font-family:var(--sans); line-height:1.5; -webkit-font-smoothing:antialiased;
     padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
   .wrap{max-width:480px; margin:0 auto; min-height:100svh; display:flex; flex-direction:column; padding:18px 18px 22px}
 
@@ -32,49 +28,54 @@
   .brand{display:flex; flex-direction:column; line-height:1.1}
   .mark{font-family:var(--display); font-weight:800; font-size:24px; letter-spacing:-.02em}
   .mark b{color:var(--accent)}
-  .by{font-size:11px; color:var(--muted); letter-spacing:.01em}
-  .lang{font-family:var(--sans); font-size:13px; font-weight:500; color:var(--ink);
-    background:var(--card); border:1px solid var(--line); border-radius:11px; padding:9px 11px; box-shadow:var(--shadow)}
+  .by{font-size:11px; color:var(--muted)}
+  .lang{font-family:var(--sans); font-size:13px; font-weight:500; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:11px; padding:9px 11px; box-shadow:var(--shadow)}
   .lang:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
 
   main{flex:1; display:flex; flex-direction:column; gap:14px; padding-top:4px}
 
-  /* ---------- landing ---------- */
-  .intro{display:flex; flex-direction:column; gap:16px; text-align:center; padding:18px 6px 4px}
+  .intro{display:flex; flex-direction:column; gap:15px; text-align:center; padding:16px 6px 2px}
   .lens{width:72px; height:72px; border-radius:22px; background:var(--ink); color:var(--paper); display:grid; place-items:center; margin:2px auto 0; box-shadow:var(--shadow)}
   .lens svg{width:34px;height:34px}
   .intro h1{font-family:var(--display); font-weight:700; font-size:27px; letter-spacing:-.02em; margin:0}
   .intro p{margin:0 auto; color:var(--muted); font-size:15px; max-width:30ch}
-  .bins{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:2px}
-  .bchip{font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:999px; display:inline-flex; gap:6px; align-items:center}
+  .bins{display:flex; flex-wrap:wrap; gap:8px; justify-content:center}
+  .bchip{font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:999px}
 
-  /* ---------- stage / preview ---------- */
   .stage{position:relative; border-radius:22px; background:#000; aspect-ratio:4/5; overflow:hidden; box-shadow:var(--shadow)}
   .stage[hidden]{display:none}
-  .stage img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain}
+  .stage video,.stage img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+  .stage img{object-fit:contain}
+  .stage video[hidden],.stage img[hidden]{display:none}
   .scan{position:absolute; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,#fff,transparent); opacity:0}
   .stage.busy .scan{opacity:.9; animation:scan 1.3s ease-in-out infinite}
   .stage.busy::after{content:"Identifying…"; position:absolute; bottom:12px; left:0; right:0; text-align:center; color:#fff; font-size:13px; font-weight:600; text-shadow:0 1px 4px rgba(0,0,0,.6)}
   @keyframes scan{0%{top:6%}50%{top:92%}100%{top:6%}}
+  .shutter{position:absolute; bottom:16px; left:50%; transform:translateX(-50%); width:66px; height:66px; border-radius:50%; background:#fff; border:5px solid rgba(255,255,255,.45); cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.4)}
+  .shutter[hidden]{display:none}
+  .camhint{position:absolute; top:12px; left:0; right:0; text-align:center; color:#fff; font-size:12.5px; text-shadow:0 1px 4px rgba(0,0,0,.6)}
+  .camhint[hidden]{display:none}
 
-  /* ---------- result ---------- */
-  .result{display:flex; flex-direction:column; gap:12px}
-  .result[hidden]{display:none}
+  .result{display:flex; flex-direction:column; gap:12px} .result[hidden]{display:none}
   .hero{background:var(--accent); color:#fff; border-radius:22px; padding:22px 20px 18px; text-align:center; box-shadow:var(--shadow); animation:rise .32s ease both}
   @keyframes rise{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
-  .hero .emoji{font-size:58px; line-height:1}
+  .hero .emoji{font-size:56px; line-height:1}
   .hero .item{font-family:var(--display); font-weight:800; font-size:36px; letter-spacing:-.02em; text-transform:capitalize; margin:4px 0 8px}
   .binpill{display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,.18); padding:7px 14px; border-radius:999px; font-weight:600; font-size:14.5px}
   .meter{height:8px; border-radius:999px; background:rgba(255,255,255,.25); margin:14px 4px 6px; overflow:hidden}
+  .meter[hidden]{display:none}
   .meter span{display:block; height:100%; background:#fff; border-radius:999px; width:0; transition:width .5s ease}
-  .conf{font-size:12.5px; opacity:.9}
+  .conf{font-size:12.5px; opacity:.92}
+  .badges{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:8px}
+  .badge{font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; background:rgba(255,255,255,.16)}
 
-  .badges{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:2px}
-  .badge{font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; display:inline-flex; gap:6px; align-items:center; background:rgba(255,255,255,.16)}
-
-  .guesses{display:flex; gap:7px; flex-wrap:wrap; justify-content:center}
-  .guess{font-size:12px; color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:5px 10px}
-  .guess b{color:var(--ink); text-transform:capitalize; font-weight:600}
+  .correct{background:var(--hazard-t); border:1px solid #f3c9c4; color:#8a2b22; border-radius:14px; padding:11px 13px; font-size:13px}
+  .correct[hidden]{display:none}
+  .guesses{display:flex; gap:7px; flex-wrap:wrap; align-items:center}
+  .glabel{font-size:12px; color:var(--muted)}
+  .guess{font-size:12.5px; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:7px 11px; cursor:pointer; text-transform:capitalize}
+  .guess:active{transform:scale(.97)}
+  .pickall{font-size:12.5px; border:1px dashed var(--line); background:transparent; color:var(--muted); border-radius:11px; padding:8px 10px}
 
   .panel{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 16px 14px; box-shadow:var(--shadow)}
   .panel h3{margin:0 0 7px; font-size:12.5px; font-weight:700; color:var(--muted); display:flex; align-items:center; gap:7px}
@@ -87,13 +88,11 @@
   .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite ease-in-out}
   @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
 
-  /* ---------- chat ---------- */
   .ask h3{margin:0 0 9px}
   .chips{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:10px}
   .chip{font-size:12.5px; font-weight:500; background:var(--field); border:1px solid var(--line); color:var(--ink); border-radius:999px; padding:8px 12px; cursor:pointer}
   .chip:active{transform:scale(.97)}
-  .thread{display:flex; flex-direction:column; gap:9px}
-  .thread:empty{display:none}
+  .thread{display:flex; flex-direction:column; gap:9px} .thread:empty{display:none}
   .msg{max-width:88%; padding:10px 13px; border-radius:15px; font-size:14.5px; white-space:pre-wrap; word-wrap:break-word}
   .msg.bot{align-self:flex-start; background:var(--field); border:1px solid var(--line); border-bottom-left-radius:5px}
   .msg.me{align-self:flex-end; background:var(--ink); color:var(--paper); border-bottom-right-radius:5px}
@@ -105,16 +104,13 @@
   .composer input:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
   .send{background:var(--accent); color:#fff; border:none; border-radius:12px; padding:0 15px; font-weight:600; cursor:pointer}
 
-  /* ---------- buttons ---------- */
   .actions{display:flex; flex-direction:column; gap:9px}
   .row{display:flex; gap:9px}
   .btn{flex:1; font-family:var(--sans); font-weight:600; font-size:15.5px; border:none; border-radius:14px; padding:15px 16px; cursor:pointer; transition:transform .08s ease; display:inline-flex; align-items:center; justify-content:center; gap:9px}
-  .btn:active{transform:scale(.98)}
-  .btn svg{width:19px;height:19px}
+  .btn:active{transform:scale(.98)} .btn svg{width:19px;height:19px}
   button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
   button[disabled]{opacity:.5; cursor:default}
-  .primary{background:var(--ink); color:var(--paper)}
-  .ghost{background:var(--card); color:var(--ink); border:1.5px solid var(--line)}
+  .primary{background:var(--ink); color:var(--paper)} .ghost{background:var(--card); color:var(--ink); border:1.5px solid var(--line)}
 
   .status{min-height:18px; font-size:13px; color:var(--hazard); text-align:center}
   footer{margin-top:16px; text-align:center}
@@ -128,31 +124,19 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">
-      <span class="mark">Which <b>bin?</b></span>
-      <span class="by">by Rupin</span>
-    </div>
+    <div class="brand"><span class="mark">Which <b>bin?</b></span><span class="by">by Rupin</span></div>
     <select class="lang" id="lang" aria-label="Language for answers and voice">
-      <option value="en-IN">English</option>
-      <option value="hi-IN">हिन्दी</option>
-      <option value="ta-IN">தமிழ்</option>
-      <option value="te-IN">తెలుగు</option>
-      <option value="kn-IN">ಕನ್ನಡ</option>
-      <option value="ml-IN">മലയാളം</option>
-      <option value="mr-IN">मराठी</option>
-      <option value="gu-IN">ગુજરાતી</option>
-      <option value="bn-IN">বাংলা</option>
-      <option value="pa-IN">ਪੰਜਾਬੀ</option>
-      <option value="od-IN">ଓଡ଼ିଆ</option>
+      <option value="en-IN">English</option><option value="hi-IN">हिन्दी</option>
+      <option value="ta-IN">தமிழ்</option><option value="te-IN">తెలుగు</option>
+      <option value="kn-IN">ಕನ್ನಡ</option><option value="ml-IN">മലയാളം</option>
+      <option value="mr-IN">मराठी</option><option value="gu-IN">ગુજરાતી</option>
+      <option value="bn-IN">বাংলা</option><option value="pa-IN">ਪੰਜਾਬੀ</option><option value="od-IN">ଓଡ଼ିଆ</option>
     </select>
   </header>
 
   <main>
-    <!-- Landing -->
     <section class="intro" id="intro">
-      <div class="lens" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/><circle cx="12" cy="13" r="3.5"/></svg>
-      </div>
+      <div class="lens" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
       <h1>Snap it. Sort it.</h1>
       <p>Point your camera at any item and find out which bin it belongs in — plus how to dispose of it, spoken in your language.</p>
       <div class="bins">
@@ -163,23 +147,25 @@
       </div>
     </section>
 
-    <!-- Photo preview -->
     <div class="stage" id="stage" hidden>
-      <img id="preview" alt="Your photo" />
-      <div class="scan" id="scan"></div>
+      <video id="video" playsinline muted hidden></video>
+      <img id="preview" alt="Your photo" hidden />
+      <div class="scan"></div>
+      <div class="camhint" id="camhint" hidden>Frame the item, then tap the button</div>
+      <button class="shutter" id="shutter" hidden aria-label="Capture photo"></button>
     </div>
 
-    <!-- Result -->
     <section class="result" id="result" hidden>
       <div class="hero">
         <div class="emoji" id="rEmoji"></div>
         <div class="item" id="rItem"></div>
         <div class="binpill" id="rBin"></div>
-        <div class="meter"><span id="rMeter"></span></div>
+        <div class="meter" id="rMeterWrap"><span id="rMeter"></span></div>
         <div class="conf" id="rConf"></div>
         <div class="badges" id="rBadges"></div>
       </div>
 
+      <div class="correct" id="correct" hidden>Not confident on this one — if it's wrong, tap the right item below.</div>
       <div class="guesses" id="rGuesses"></div>
 
       <div class="panel">
@@ -195,22 +181,16 @@
         <h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Ask about this item</h3>
         <div class="chips" id="chips"></div>
         <div class="thread" id="thread"></div>
-        <div class="composer">
-          <input id="q" type="text" placeholder="Type a question…" autocomplete="off" />
-          <button class="send" id="sendBtn">Send</button>
-        </div>
+        <div class="composer"><input id="q" type="text" placeholder="Type a question…" autocomplete="off" /><button class="send" id="sendBtn">Send</button></div>
       </div>
     </section>
 
-    <!-- Actions -->
     <div class="actions">
       <div class="row" id="startRow">
-        <button class="btn primary" id="shoot">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/><circle cx="12" cy="13" r="3.5"/></svg>
-          Take a photo
-        </button>
+        <button class="btn primary" id="shoot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/><circle cx="12" cy="13" r="3.5"/></svg>Take a photo</button>
         <button class="btn ghost" id="upload">Upload</button>
       </div>
+      <button class="btn ghost" id="cancelCam" hidden>Cancel</button>
       <button class="btn primary" id="identify" hidden>Identify waste</button>
       <button class="btn ghost" id="again" hidden>Scan another</button>
     </div>
@@ -224,168 +204,214 @@
   </footer>
 </div>
 
-<input type="file" id="cam" accept="image/*" capture="environment" />
 <input type="file" id="gal" accept="image/*" />
 <audio id="player" hidden></audio>
 
 <script>
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// Local copy of class metadata so a wrong guess can be corrected instantly.
+const META = {"classes": ["plastic","glass","metal","cardboard","paper","biological","battery","trash","clothes","shoes","vegetation"],
+"bin_info":{"plastic":{"bin":"recycle","emoji":"♻️","hazardous":false},"glass":{"bin":"recycle","emoji":"♻️","hazardous":false},"metal":{"bin":"recycle","emoji":"♻️","hazardous":false},"cardboard":{"bin":"recycle","emoji":"♻️","hazardous":false},"paper":{"bin":"recycle","emoji":"♻️","hazardous":false},"biological":{"bin":"compost","emoji":"🟤","hazardous":false},"vegetation":{"bin":"compost","emoji":"🟤","hazardous":false},"battery":{"bin":"hazardous","emoji":"⚠️","hazardous":true},"trash":{"bin":"landfill","emoji":"🗑️","hazardous":false},"clothes":{"bin":"landfill","emoji":"🗑️","hazardous":false},"shoes":{"bin":"landfill","emoji":"🗑️","hazardous":false}},
+"instructions":{"plastic":"Empty, rinse and dry it, then put it in the recycling bin. Leave caps on.","glass":"Rinse the glass and place it in the recycling bin. Do not break it first.","metal":"Rinse cans and foil, then recycle. Crush cans to save space.","cardboard":"Flatten the cardboard and keep it dry before recycling.","paper":"Keep paper clean and dry, then recycle. No greasy or wet paper.","biological":"Put food scraps in the compost or green/organic bin.","vegetation":"Add garden and plant waste to the compost or green bin.","battery":"Do NOT bin batteries. Drop them at a battery / e-waste collection point.","trash":"This goes in the general landfill bin.","clothes":"Reuse or donate if wearable; otherwise textile-recycle or landfill.","shoes":"Donate wearable shoes; otherwise place in the general waste bin."},
+"common_mistakes":{"plastic":"People leave food residue inside, which contaminates a whole batch.","glass":"Broken glass and drinking glasses/Pyrex are often not accepted - check locally.","metal":"Small foil balls and bottle caps are frequently missed by sorters.","cardboard":"Greasy pizza boxes are not recyclable - tear off clean parts only.","paper":"Shredded paper and laminated paper usually cannot be recycled.","biological":"Compostable plastics are often mistaken for real compost - they are not.","vegetation":"Treated or painted wood should not go in green waste.","battery":"Throwing batteries in normal bins is a fire hazard and illegal in many places.","trash":"Many 'trash' items are actually recyclable - double-check first.","clothes":"Wet or mouldy textiles ruin whole donation bags.","shoes":"Odd single shoes still have recycling value - keep pairs together."}};
+
 const THEME = {
-  recycle:  {c:css('--recycle'), t:css('--recycle-t'),  label:'Recycling'},
-  compost:  {c:css('--compost'), t:css('--compost-t'),  label:'Compost / wet waste'},
-  hazardous:{c:css('--hazard'),  t:css('--hazard-t'),   label:'Hazardous — drop-off'},
-  landfill: {c:css('--landfill'),t:css('--landfill-t'), label:'General waste'},
+  recycle:{c:css('--recycle'),t:css('--recycle-t'),label:'Recycling'},
+  compost:{c:css('--compost'),t:css('--compost-t'),label:'Compost / wet waste'},
+  hazardous:{c:css('--hazard'),t:css('--hazard-t'),label:'Hazardous — drop-off'},
+  landfill:{c:css('--landfill'),t:css('--landfill-t'),label:'General waste'},
 };
-const SPK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
-const SUGGESTIONS = ['Can I recycle this?', 'How do I clean it first?', 'Is it hazardous?'];
+const SPK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
+const SUGGESTIONS=['Can I recycle this?','How do I clean it first?','Is it hazardous?'];
 
-let currentImage = null, item = null, history = [];
+let currentImage=null, item=null, history=[], stream=null, spokenText='';
 
-$('shoot').onclick  = () => $('cam').click();
+$('shoot').onclick  = openCamera;
 $('upload').onclick = () => $('gal').click();
-$('cam').onchange = e => e.target.files[0] && loadImage(e.target.files[0]);
-$('gal').onchange = e => e.target.files[0] && loadImage(e.target.files[0]);
+$('cancelCam').onclick = () => reset();
+$('shutter').onclick = capture;
+$('gal').onchange = e => e.target.files[0] && fromFile(e.target.files[0]);
 $('identify').onclick = identify;
 $('again').onclick = reset;
 $('sendBtn').onclick = () => send($('q').value);
-$('q').addEventListener('keydown', e => { if (e.key === 'Enter') send($('q').value); });
+$('q').addEventListener('keydown', e => { if(e.key==='Enter') send($('q').value); });
+// Seamless language switch: re-do the "What to do" summary in the new language.
+$('lang').onchange = () => { if(item && !$('result').hidden) openingGuidance(item); };
 
-function loadImage(file){
-  const img = new Image();
-  img.onload = () => {
-    const max = 512, s = Math.min(1, max / Math.max(img.width, img.height));
-    const c = document.createElement('canvas');
-    c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    currentImage = c.toDataURL('image/jpeg', 0.85);
-    $('preview').src = currentImage;
-    $('intro').hidden = true; $('stage').hidden = false; $('result').hidden = true;
-    $('startRow').hidden = true; $('identify').hidden = false; $('again').hidden = false;
-    setStatus('');
-  };
-  img.src = URL.createObjectURL(file);
-}
-
-async function identify(){
-  if(!currentImage) return;
-  $('identify').disabled = true; $('stage').classList.add('busy'); setStatus('');
+/* ---------- in-page camera (no app switch = no "Aw Snap") ---------- */
+async function openCamera(){
+  setStatus('');
+  if(!navigator.mediaDevices?.getUserMedia){ $('gal').click(); return; }  // old browser -> file picker
   try{
-    const r = await post('/api/classify', {image: currentImage});
-    if(r.error) throw new Error(r.error);
-    item = r; showResult(r);
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}, audio:false});
+    const v=$('video'); v.srcObject=stream; await v.play();
+    $('intro').hidden=true; $('stage').hidden=false; $('result').hidden=true;
+    v.hidden=false; $('preview').hidden=true;
+    $('shutter').hidden=false; $('camhint').hidden=false;
+    $('startRow').hidden=true; $('identify').hidden=true; $('again').hidden=true; $('cancelCam').hidden=false;
   }catch(err){
-    setStatus('Could not identify that. Try a clearer, closer photo in good light.'); console.error(err);
-  }finally{
-    $('stage').classList.remove('busy');
-    $('identify').disabled = false; $('identify').hidden = true;
+    // permission denied or no camera -> fall back to gallery/file upload
+    setStatus('Camera unavailable — choose a photo instead.');
+    $('gal').click();
   }
 }
+function capture(){
+  const v=$('video'); if(!v.videoWidth) return;
+  const s=Math.min(1, 512/Math.max(v.videoWidth, v.videoHeight));
+  const c=document.createElement('canvas');
+  c.width=Math.round(v.videoWidth*s); c.height=Math.round(v.videoHeight*s);
+  c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+  currentImage=c.toDataURL('image/jpeg',0.85);
+  stopStream();
+  $('video').hidden=true; $('shutter').hidden=true; $('camhint').hidden=true; $('cancelCam').hidden=true;
+  const img=$('preview'); img.src=currentImage; img.hidden=false;
+  $('identify').hidden=false; $('again').hidden=false;
+}
+function stopStream(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $('video').srcObject=null; }
 
-function showResult(r){
-  const th = THEME[r.bin.type] || THEME.landfill;
+/* ---------- upload path (memory-safe decode) ---------- */
+async function fromFile(file){
+  setStatus('');
+  try{
+    let w,h,canvas=document.createElement('canvas'), ctx=canvas.getContext('2d');
+    if('createImageBitmap' in window){
+      const bmp=await createImageBitmap(file);
+      const s=Math.min(1,512/Math.max(bmp.width,bmp.height));
+      w=Math.round(bmp.width*s); h=Math.round(bmp.height*s);
+      canvas.width=w; canvas.height=h; ctx.drawImage(bmp,0,0,w,h); bmp.close?.();
+    }else{
+      const url=URL.createObjectURL(file);
+      await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ const s=Math.min(1,512/Math.max(im.width,im.height)); w=Math.round(im.width*s); h=Math.round(im.height*s); canvas.width=w; canvas.height=h; ctx.drawImage(im,0,0,w,h); URL.revokeObjectURL(url); res(); }; im.onerror=rej; im.src=url; });
+    }
+    currentImage=canvas.toDataURL('image/jpeg',0.85);
+    stopStream();
+    $('intro').hidden=true; $('stage').hidden=false; $('result').hidden=true;
+    $('video').hidden=true; $('shutter').hidden=true; $('camhint').hidden=true; $('cancelCam').hidden=true;
+    const img=$('preview'); img.src=currentImage; img.hidden=false;
+    $('startRow').hidden=true; $('identify').hidden=false; $('again').hidden=false;
+  }catch(err){ setStatus('Could not read that image. Try another.'); console.error(err); }
+}
+
+/* ---------- classify ---------- */
+async function identify(){
+  if(!currentImage) return;
+  $('identify').disabled=true; $('stage').classList.add('busy'); setStatus('');
+  try{
+    const r=await post('/api/classify',{image:currentImage});
+    if(r.error) throw new Error(r.error);
+    showResult(r);
+  }catch(err){ setStatus('Could not identify that. Try a clearer, closer photo in good light.'); console.error(err); }
+  finally{ $('stage').classList.remove('busy'); $('identify').disabled=false; $('identify').hidden=true; }
+}
+
+function buildItem(cls, confidence, top3){
+  const b=META.bin_info[cls];
+  return {class:cls, confidence, bin:{type:b.bin, emoji:b.emoji}, hazardous:b.hazardous,
+          recyclable:b.bin==='recycle', instructions:META.instructions[cls], common_mistake:META.common_mistakes[cls], top3:top3||[]};
+}
+
+function showResult(r){ item=r; renderItem(); $('stage').hidden=true; $('result').hidden=false; }
+
+// Re-render hero + guidance for the current item (used for first result AND corrections).
+function renderItem(){
+  const r=item, th=THEME[r.bin.type]||THEME.landfill;
   document.documentElement.style.setProperty('--accent', th.c);
   document.documentElement.style.setProperty('--accent-t', th.t);
+  $('rEmoji').textContent=r.bin.emoji;
+  $('rItem').textContent=r.class;
+  $('rBin').innerHTML=`${r.bin.emoji} ${th.label}`;
+  if(r.confidence==null){ $('rMeterWrap').hidden=true; $('rConf').textContent='You picked this'; }
+  else { $('rMeterWrap').hidden=false; requestAnimationFrame(()=> $('rMeter').style.width=`${Math.round(r.confidence*100)}%`); $('rConf').textContent=`${Math.round(r.confidence*100)}% confident`; }
 
-  $('rEmoji').textContent = r.bin.emoji;
-  $('rItem').textContent  = r.class;
-  $('rBin').innerHTML = `${r.bin.emoji} ${th.label}`;
-  $('rConf').textContent = `${Math.round(r.confidence*100)}% confident`;
-  requestAnimationFrame(()=> $('rMeter').style.width = `${Math.round(r.confidence*100)}%`);
-
-  // badges
-  const badges = [];
-  badges.push(r.recyclable ? '✓ Recyclable' : '✗ Not recyclable');
+  const badges=[ r.recyclable?'✓ Recyclable':'✗ Not recyclable' ];
   if(r.hazardous) badges.push('⚠️ Handle with care');
-  $('rBadges').innerHTML = badges.map(b=>`<span class="badge">${b}</span>`).join('');
+  $('rBadges').innerHTML=badges.map(b=>`<span class="badge">${b}</span>`).join('');
 
-  // top-3 alternatives
-  $('rGuesses').innerHTML = (r.top3||[]).map(g =>
-    `<span class="guess"><b>${g.class}</b> ${Math.round(g.confidence*100)}%</span>`).join('');
+  // correction UI: show when low confidence, offer top-3 + full list
+  $('correct').hidden = !(r.confidence!=null && r.confidence<0.6);
+  const alts=(r.top3||[]).filter(g=>g.class!==r.class);
+  let html = alts.length ? `<span class="glabel">Or:</span>` + alts.map(g=>`<button class="guess" data-c="${g.class}">${g.class} ${Math.round(g.confidence*100)}%</button>`).join('') : '';
+  html += `<select class="pickall" id="pickall"><option value="">Something else…</option>${META.classes.filter(c=>c!==r.class).map(c=>`<option value="${c}">${c}</option>`).join('')}</select>`;
+  $('rGuesses').innerHTML = html;
+  [...document.querySelectorAll('.guess')].forEach(b=> b.onclick=()=>correctTo(b.dataset.c));
+  $('pickall').onchange = e => { if(e.target.value) correctTo(e.target.value); };
 
-  // reset conversation + chips
-  history = []; $('thread').innerHTML = '';
-  $('chips').innerHTML = SUGGESTIONS.map(s=>`<button class="chip">${s}</button>`).join('');
-  [...$('chips').children].forEach(c => c.onclick = () => send(c.textContent));
+  // reset chat + chips
+  history=[]; $('thread').innerHTML='';
+  $('chips').innerHTML=SUGGESTIONS.map(s=>`<button class="chip">${s}</button>`).join('');
+  [...$('chips').children].forEach(c=> c.onclick=()=>send(c.textContent));
 
-  $('stage').hidden = true;
-  $('result').hidden = false;
-
-  // "What to do" — instant built-in tip, then Groq localised version.
   openingGuidance(r);
 }
 
-async function openingGuidance(r){
-  const el = $('doText');
-  el.textContent = `${r.instructions} Watch out: ${r.common_mistake}`;  // instant fallback
-  $('doSpeak').hidden = false;
-  let spoken = `This is ${r.class}. ${r.instructions} Watch out: ${r.common_mistake}`;
-  $('doSpeak').onclick = () => speak(spoken, $('doSpeak'));
+function correctTo(cls){
+  const prev=item.top3;
+  const match=(prev||[]).find(g=>g.class===cls);
+  item=buildItem(cls, match?match.confidence:null, prev);
+  renderItem();
+}
 
-  el.innerHTML = '<span class="thinking"><span class="dot"></span>Getting tips in your language…</span>';
+/* ---------- Groq: localised "what to do" + chat ---------- */
+async function openingGuidance(r){
+  const el=$('doText');
+  const fallback=`${r.instructions} Watch out: ${r.common_mistake}`;
+  el.innerHTML='<span class="thinking"><span class="dot"></span>Getting tips in your language…</span>';
+  $('doSpeak').hidden=false;
+  spokenText=`This is ${r.class}. ${fallback}`;
+  $('doSpeak').onclick=()=>speak(spokenText,$('doSpeak'));
   try{
-    const g = await post('/api/chat', {label:r.class, bin:r.bin.type, confidence:r.confidence, lang:$('lang').value, messages:[]});
-    if(g && g.text){
-      el.textContent = g.text; spoken = g.text;
-      history.push({role:'assistant', content:g.text});
-      $('doSpeak').onclick = () => speak(spoken, $('doSpeak'));
-    } else el.textContent = `${r.instructions} Watch out: ${r.common_mistake}`;
-  }catch{
-    el.textContent = `${r.instructions} Watch out: ${r.common_mistake}`;
-  }
+    const g=await post('/api/chat',{label:r.class,bin:r.bin.type,confidence:r.confidence||0,lang:$('lang').value,messages:[]});
+    if(g && g.text){ el.textContent=g.text; spokenText=g.text; history=[{role:'assistant',content:g.text}]; }
+    else el.textContent=fallback;
+  }catch{ el.textContent=fallback; }
 }
 
 async function send(text){
-  text = (text||'').trim();
-  if(!text || !item) return;
-  $('q').value = '';
-  addMe(text); history.push({role:'user', content:text});
-  const row = addBotRow(); thinking(row);
+  text=(text||'').trim(); if(!text||!item) return;
+  $('q').value='';
+  addMe(text); history.push({role:'user',content:text});
+  const row=addBotRow(); thinking(row);
   try{
-    const r = await post('/api/chat', {label:item.class, bin:item.bin.type, confidence:item.confidence, lang:$('lang').value, messages:history});
-    if(r.error || !r.text) throw new Error(r.error || 'no text');
-    fillBot(row, r.text); history.push({role:'assistant', content:r.text});
-  }catch(err){ fillBot(row, 'Sorry, I could not answer that just now. Please try again.'); console.error(err); }
+    const r=await post('/api/chat',{label:item.class,bin:item.bin.type,confidence:item.confidence||0,lang:$('lang').value,messages:history});
+    if(r.error||!r.text) throw new Error(r.error||'no text');
+    fillBot(row,r.text); history.push({role:'assistant',content:r.text});
+  }catch(err){ fillBot(row,'Sorry, I could not answer that just now. Please try again.'); console.error(err); }
 }
 
-/* chat rendering */
 function addMe(t){ const d=document.createElement('div'); d.className='msg me'; d.textContent=t; $('thread').appendChild(d); see(); }
 function addBotRow(){ const r=document.createElement('div'); r.className='botrow'; $('thread').appendChild(r); see(); return r; }
 function thinking(row){ row.innerHTML='<div class="msg bot"><span class="thinking"><span class="dot"></span>Thinking…</span></div>'; see(); }
-function fillBot(row, text){
-  row.innerHTML='';
-  const b=document.createElement('div'); b.className='msg bot'; b.textContent=text;
-  const m=document.createElement('button'); m.className='mini'; m.innerHTML=SPK+'<span>Listen</span>';
-  m.onclick=()=>speak(text, m);
-  row.append(b, m); see();
-}
+function fillBot(row,text){ row.innerHTML=''; const b=document.createElement('div'); b.className='msg bot'; b.textContent=text; const m=document.createElement('button'); m.className='mini'; m.innerHTML=SPK+'<span>Listen</span>'; m.onclick=()=>speak(text,m); row.append(b,m); see(); }
 function see(){ $('thread').lastElementChild?.scrollIntoView({block:'nearest'}); }
 
-/* Sarvam voice in chosen language */
-async function speak(text, btn){
-  btn.disabled = true;
+async function speak(text,btn){
+  btn.disabled=true;
   try{
-    const r = await post('/api/tts', {text, language_code:$('lang').value});
-    if(r.error || !r.audio) throw new Error(r.error || 'no audio');
+    const r=await post('/api/tts',{text,language_code:$('lang').value});
+    if(r.error||!r.audio) throw new Error(r.error||'no audio');
     const p=$('player'); p.src=`data:${r.mime||'audio/mpeg'};base64,${r.audio}`; await p.play();
   }catch(err){ setStatus('Voice is unavailable right now.'); console.error(err); }
-  finally{ btn.disabled = false; }
+  finally{ btn.disabled=false; }
 }
 
 function reset(){
-  currentImage=null; item=null; history=[];
-  $('preview').src=''; $('stage').hidden=true; $('stage').classList.remove('busy');
+  stopStream();
+  currentImage=null; item=null; history=[]; spokenText='';
+  $('preview').src=''; $('preview').hidden=true; $('video').hidden=true;
+  $('stage').hidden=true; $('stage').classList.remove('busy');
+  $('shutter').hidden=true; $('camhint').hidden=true; $('cancelCam').hidden=true;
   $('result').hidden=true; $('thread').innerHTML=''; $('chips').innerHTML='';
-  $('intro').hidden=false; $('startRow').hidden=false;
-  $('identify').hidden=true; $('again').hidden=true; setStatus('');
-  $('cam').value=''; $('gal').value='';
+  $('intro').hidden=false; $('startRow').hidden=false; $('identify').hidden=true; $('again').hidden=true;
+  $('gal').value=''; setStatus('');
   document.documentElement.style.setProperty('--accent', css('--recycle'));
   document.documentElement.style.setProperty('--accent-t', css('--recycle-t'));
 }
 
-function setStatus(t){ $('status').textContent = t; }
-async function post(url, body){
-  const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+function setStatus(t){ $('status').textContent=t; }
+async function post(url,body){
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   return res.json();
 }
 </script>
