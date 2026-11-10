@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler
 import json, os, urllib.request, urllib.error
 
 KEY   = os.environ.get("GROQ_API_KEY")
-MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")  # llama-3.1-8b-instant was decommissioned 2026-08-16
 URL   = "https://api.groq.com/openai/v1/chat/completions"
 
 LANGS = {
