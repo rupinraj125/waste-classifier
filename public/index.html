@@ -11,10 +11,8 @@
 <style>
   :root{
     --paper:#FBFAF6; --card:#FFFFFF; --ink:#141A16; --muted:#5B6A60; --line:#E6E2D8; --field:#F2EFE7;
-    --recycle:#1668E0; --recycle-t:#E7F0FD;
-    --compost:#8A6A34; --compost-t:#F4ECDE;
-    --hazard:#CE3A2E;  --hazard-t:#FBE7E5;
-    --landfill:#59636E;--landfill-t:#ECEEF1;
+    --recycle:#1668E0; --recycle-t:#E7F0FD; --compost:#8A6A34; --compost-t:#F4ECDE;
+    --hazard:#CE3A2E; --hazard-t:#FBE7E5; --landfill:#59636E; --landfill-t:#ECEEF1;
     --accent:var(--recycle); --accent-t:var(--recycle-t);
     --sans:"Inter",system-ui,sans-serif; --display:"Bricolage Grotesque","Inter",system-ui,sans-serif;
     --shadow:0 10px 30px rgba(20,26,22,.10);
@@ -27,25 +25,31 @@
   header{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px}
   .brand{display:flex; flex-direction:column; line-height:1.1}
   .mark{font-family:var(--display); font-weight:800; font-size:24px; letter-spacing:-.02em}
-  .mark b{color:var(--accent)}
-  .by{font-size:11px; color:var(--muted)}
+  .mark b{color:var(--accent)} .by{font-size:11px; color:var(--muted)}
+  .htools{display:flex; align-items:center; gap:8px}
+  .mute{width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow)}
+  .mute svg{width:19px;height:19px} .mute.off{color:var(--muted)}
   .lang{font-family:var(--sans); font-size:13px; font-weight:500; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:11px; padding:9px 11px; box-shadow:var(--shadow)}
-  .lang:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  select:focus-visible,button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
 
   main{flex:1; display:flex; flex-direction:column; gap:14px; padding-top:4px}
 
-  .intro{display:flex; flex-direction:column; gap:15px; text-align:center; padding:16px 6px 2px}
-  .lens{width:72px; height:72px; border-radius:22px; background:var(--ink); color:var(--paper); display:grid; place-items:center; margin:2px auto 0; box-shadow:var(--shadow)}
-  .lens svg{width:34px;height:34px}
-  .intro h1{font-family:var(--display); font-weight:700; font-size:27px; letter-spacing:-.02em; margin:0}
-  .intro p{margin:0 auto; color:var(--muted); font-size:15px; max-width:30ch}
+  .intro{display:flex; flex-direction:column; gap:14px; text-align:center; padding:12px 6px 2px}
+  .lens{width:70px; height:70px; border-radius:22px; background:var(--ink); color:var(--paper); display:grid; place-items:center; margin:2px auto 0; box-shadow:var(--shadow)}
+  .lens svg{width:33px;height:33px}
+  .intro h1{font-family:var(--display); font-weight:700; font-size:26px; letter-spacing:-.02em; margin:0}
+  .intro p{margin:0 auto; color:var(--muted); font-size:14.5px; max-width:30ch}
   .bins{display:flex; flex-wrap:wrap; gap:8px; justify-content:center}
   .bchip{font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:999px}
+  .langcard{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; text-align:left; margin-top:2px}
+  .langcard .lab{font-size:13.5px} .langcard .lab b{font-weight:600}
+  .langcard .lab span{display:block; color:var(--muted); font-size:12px}
+  .langcard select{font-family:var(--sans); font-size:15px; font-weight:600; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:11px; padding:10px 12px; min-width:118px}
 
   .stage{position:relative; border-radius:22px; background:#000; aspect-ratio:4/5; overflow:hidden; box-shadow:var(--shadow)}
   .stage[hidden]{display:none}
-  .stage video,.stage img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
-  .stage img{object-fit:contain}
+  .stage video,.stage img{position:absolute; inset:0; width:100%; height:100%}
+  .stage video{object-fit:cover} .stage img{object-fit:contain}
   .stage video[hidden],.stage img[hidden]{display:none}
   .scan{position:absolute; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,#fff,transparent); opacity:0}
   .stage.busy .scan{opacity:.9; animation:scan 1.3s ease-in-out infinite}
@@ -62,15 +66,13 @@
   .hero .emoji{font-size:56px; line-height:1}
   .hero .item{font-family:var(--display); font-weight:800; font-size:36px; letter-spacing:-.02em; text-transform:capitalize; margin:4px 0 8px}
   .binpill{display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,.18); padding:7px 14px; border-radius:999px; font-weight:600; font-size:14.5px}
-  .meter{height:8px; border-radius:999px; background:rgba(255,255,255,.25); margin:14px 4px 6px; overflow:hidden}
-  .meter[hidden]{display:none}
+  .meter{height:8px; border-radius:999px; background:rgba(255,255,255,.25); margin:14px 4px 6px; overflow:hidden} .meter[hidden]{display:none}
   .meter span{display:block; height:100%; background:#fff; border-radius:999px; width:0; transition:width .5s ease}
   .conf{font-size:12.5px; opacity:.92}
   .badges{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:8px}
   .badge{font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; background:rgba(255,255,255,.16)}
 
-  .correct{background:var(--hazard-t); border:1px solid #f3c9c4; color:#8a2b22; border-radius:14px; padding:11px 13px; font-size:13px}
-  .correct[hidden]{display:none}
+  .correct{background:var(--hazard-t); border:1px solid #f3c9c4; color:#8a2b22; border-radius:14px; padding:11px 13px; font-size:13px} .correct[hidden]{display:none}
   .guesses{display:flex; gap:7px; flex-wrap:wrap; align-items:center}
   .glabel{font-size:12px; color:var(--muted)}
   .guess{font-size:12.5px; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:7px 11px; cursor:pointer; text-transform:capitalize}
@@ -82,23 +84,22 @@
   .panel h3 .ic{width:20px;height:20px;border-radius:7px;background:var(--accent-t); color:var(--accent); display:grid;place-items:center}
   .panel h3 .ic svg{width:13px;height:13px}
   .panel .body{font-size:15.5px}
-  .speak{margin-top:10px; display:inline-flex; align-items:center; gap:7px; background:var(--accent-t); border:none; color:var(--accent); font-weight:600; font-size:13px; padding:9px 13px; border-radius:11px; cursor:pointer}
-  .speak svg{width:16px;height:16px} .speak:disabled{opacity:.55}
   .thinking{display:inline-flex; gap:6px; align-items:center; color:var(--muted); font-size:14.5px}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite ease-in-out}
   @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  .speaking{display:none; align-items:center; gap:6px; color:var(--accent); font-size:12px; font-weight:600; margin-top:8px}
+  .speaking.on{display:inline-flex}
+  .wave{width:3px;height:11px;background:var(--accent);border-radius:2px;animation:wave .9s infinite ease-in-out}
+  .wave:nth-child(2){animation-delay:.15s}.wave:nth-child(3){animation-delay:.3s}
+  @keyframes wave{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
 
   .ask h3{margin:0 0 9px}
   .chips{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:10px}
-  .chip{font-size:12.5px; font-weight:500; background:var(--field); border:1px solid var(--line); color:var(--ink); border-radius:999px; padding:8px 12px; cursor:pointer}
-  .chip:active{transform:scale(.97)}
+  .chip{font-size:12.5px; font-weight:500; background:var(--field); border:1px solid var(--line); color:var(--ink); border-radius:999px; padding:8px 12px; cursor:pointer} .chip:active{transform:scale(.97)}
   .thread{display:flex; flex-direction:column; gap:9px} .thread:empty{display:none}
   .msg{max-width:88%; padding:10px 13px; border-radius:15px; font-size:14.5px; white-space:pre-wrap; word-wrap:break-word}
   .msg.bot{align-self:flex-start; background:var(--field); border:1px solid var(--line); border-bottom-left-radius:5px}
   .msg.me{align-self:flex-end; background:var(--ink); color:var(--paper); border-bottom-right-radius:5px}
-  .botrow{display:flex; flex-direction:column; align-items:flex-start; gap:4px; max-width:90%}
-  .mini{display:inline-flex; align-items:center; gap:5px; background:none; border:none; color:var(--accent); font-weight:600; font-size:12px; cursor:pointer; padding:1px}
-  .mini svg{width:14px;height:14px} .mini:disabled{opacity:.5}
   .composer{display:flex; gap:8px; margin-top:11px}
   .composer input{flex:1; font-family:var(--sans); font-size:15px; border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px 13px; color:var(--ink)}
   .composer input:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
@@ -108,14 +109,12 @@
   .row{display:flex; gap:9px}
   .btn{flex:1; font-family:var(--sans); font-weight:600; font-size:15.5px; border:none; border-radius:14px; padding:15px 16px; cursor:pointer; transition:transform .08s ease; display:inline-flex; align-items:center; justify-content:center; gap:9px}
   .btn:active{transform:scale(.98)} .btn svg{width:19px;height:19px}
-  button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
   button[disabled]{opacity:.5; cursor:default}
   .primary{background:var(--ink); color:var(--paper)} .ghost{background:var(--card); color:var(--ink); border:1.5px solid var(--line)}
 
   .status{min-height:18px; font-size:13px; color:var(--hazard); text-align:center}
   footer{margin-top:16px; text-align:center}
-  footer .credit{font-family:var(--display); font-weight:700; font-size:13.5px}
-  footer .credit a{color:var(--accent); text-decoration:none}
+  footer .credit{font-family:var(--display); font-weight:700; font-size:13.5px} footer .credit a{color:var(--accent); text-decoration:none}
   footer .fine{color:var(--muted); font-size:11px; margin-top:4px}
   input[type=file]{display:none}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -125,25 +124,38 @@
 <div class="wrap">
   <header>
     <div class="brand"><span class="mark">Which <b>bin?</b></span><span class="by">by Rupin</span></div>
-    <select class="lang" id="lang" aria-label="Language for answers and voice">
-      <option value="en-IN">English</option><option value="hi-IN">हिन्दी</option>
-      <option value="ta-IN">தமிழ்</option><option value="te-IN">తెలుగు</option>
-      <option value="kn-IN">ಕನ್ನಡ</option><option value="ml-IN">മലയാളം</option>
-      <option value="mr-IN">मराठी</option><option value="gu-IN">ગુજરાતી</option>
-      <option value="bn-IN">বাংলা</option><option value="pa-IN">ਪੰਜਾਬੀ</option><option value="od-IN">ଓଡ଼ିଆ</option>
-    </select>
+    <div class="htools">
+      <button class="mute" id="mute" aria-label="Toggle voice" title="Voice on/off">
+        <svg id="muteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>
+      </button>
+      <select class="lang" id="lang" aria-label="Language">
+        <option value="en-IN">English</option><option value="hi-IN">हिन्दी</option><option value="ta-IN">தமிழ்</option>
+        <option value="te-IN">తెలుగు</option><option value="kn-IN">ಕನ್ನಡ</option><option value="ml-IN">മലയാളം</option>
+        <option value="mr-IN">मराठी</option><option value="gu-IN">ગુજરાતી</option><option value="bn-IN">বাংলা</option>
+        <option value="pa-IN">ਪੰਜਾਬੀ</option><option value="od-IN">ଓଡ଼ିଆ</option>
+      </select>
+    </div>
   </header>
 
   <main>
     <section class="intro" id="intro">
       <div class="lens" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
       <h1>Snap it. Sort it.</h1>
-      <p>Point your camera at any item and find out which bin it belongs in — plus how to dispose of it, spoken in your language.</p>
+      <p>Point your camera at any item and find out which bin it belongs in — with spoken guidance in your language.</p>
       <div class="bins">
         <span class="bchip" style="background:var(--recycle-t);color:var(--recycle)">♻️ Recycle</span>
         <span class="bchip" style="background:var(--compost-t);color:var(--compost)">🟤 Compost</span>
         <span class="bchip" style="background:var(--hazard-t);color:var(--hazard)">⚠️ Hazardous</span>
         <span class="bchip" style="background:var(--landfill-t);color:var(--landfill)">🗑️ Landfill</span>
+      </div>
+      <div class="langcard">
+        <div class="lab"><b>Answers &amp; voice</b><span>Pick your language</span></div>
+        <select id="lang2" aria-label="Language">
+          <option value="en-IN">English</option><option value="hi-IN">हिन्दी</option><option value="ta-IN">தமிழ்</option>
+          <option value="te-IN">తెలుగు</option><option value="kn-IN">ಕನ್ನಡ</option><option value="ml-IN">മലയാളം</option>
+          <option value="mr-IN">मराठी</option><option value="gu-IN">ગુજરાતી</option><option value="bn-IN">বাংলা</option>
+          <option value="pa-IN">ਪੰਜਾਬੀ</option><option value="od-IN">ଓଡ଼ିଆ</option>
+        </select>
       </div>
     </section>
 
@@ -165,16 +177,13 @@
         <div class="badges" id="rBadges"></div>
       </div>
 
-      <div class="correct" id="correct" hidden>Not confident on this one — if it's wrong, tap the right item below.</div>
+      <div class="correct" id="correct" hidden>Not fully sure on this one — if it's wrong, tap the right item below.</div>
       <div class="guesses" id="rGuesses"></div>
 
       <div class="panel">
         <h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>What to do</h3>
         <div class="body" id="doText"></div>
-        <button class="speak" id="doSpeak" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>
-          Listen
-        </button>
+        <div class="speaking" id="speaking"><span class="wave"></span><span class="wave"></span><span class="wave"></span> Speaking…</div>
       </div>
 
       <div class="panel ask">
@@ -200,7 +209,7 @@
 
   <footer>
     <div class="credit">Developed by <a href="https://github.com/rupinraj125" target="_blank" rel="noopener">Rupin</a></div>
-    <div class="fine">EfficientNetV2 vision model · 93.6% validation accuracy · a guide, not a guarantee — follow local rules for hazardous items.</div>
+    <div class="fine">EfficientNetV2 vision model, double-checked by AI when unsure · a guide, not a guarantee — follow local rules for hazardous items.</div>
   </footer>
 </div>
 
@@ -210,9 +219,9 @@
 <script>
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const SILENT = "data:audio/wav;base64,UklGRhQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YfAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIA=";
 
-// Local copy of class metadata so a wrong guess can be corrected instantly.
-const META = {"classes": ["plastic","glass","metal","cardboard","paper","biological","battery","trash","clothes","shoes","vegetation"],
+const META = {"classes":["plastic","glass","metal","cardboard","paper","biological","battery","trash","clothes","shoes","vegetation"],
 "bin_info":{"plastic":{"bin":"recycle","emoji":"♻️","hazardous":false},"glass":{"bin":"recycle","emoji":"♻️","hazardous":false},"metal":{"bin":"recycle","emoji":"♻️","hazardous":false},"cardboard":{"bin":"recycle","emoji":"♻️","hazardous":false},"paper":{"bin":"recycle","emoji":"♻️","hazardous":false},"biological":{"bin":"compost","emoji":"🟤","hazardous":false},"vegetation":{"bin":"compost","emoji":"🟤","hazardous":false},"battery":{"bin":"hazardous","emoji":"⚠️","hazardous":true},"trash":{"bin":"landfill","emoji":"🗑️","hazardous":false},"clothes":{"bin":"landfill","emoji":"🗑️","hazardous":false},"shoes":{"bin":"landfill","emoji":"🗑️","hazardous":false}},
 "instructions":{"plastic":"Empty, rinse and dry it, then put it in the recycling bin. Leave caps on.","glass":"Rinse the glass and place it in the recycling bin. Do not break it first.","metal":"Rinse cans and foil, then recycle. Crush cans to save space.","cardboard":"Flatten the cardboard and keep it dry before recycling.","paper":"Keep paper clean and dry, then recycle. No greasy or wet paper.","biological":"Put food scraps in the compost or green/organic bin.","vegetation":"Add garden and plant waste to the compost or green bin.","battery":"Do NOT bin batteries. Drop them at a battery / e-waste collection point.","trash":"This goes in the general landfill bin.","clothes":"Reuse or donate if wearable; otherwise textile-recycle or landfill.","shoes":"Donate wearable shoes; otherwise place in the general waste bin."},
 "common_mistakes":{"plastic":"People leave food residue inside, which contaminates a whole batch.","glass":"Broken glass and drinking glasses/Pyrex are often not accepted - check locally.","metal":"Small foil balls and bottle caps are frequently missed by sorters.","cardboard":"Greasy pizza boxes are not recyclable - tear off clean parts only.","paper":"Shredded paper and laminated paper usually cannot be recycled.","biological":"Compostable plastics are often mistaken for real compost - they are not.","vegetation":"Treated or painted wood should not go in green waste.","battery":"Throwing batteries in normal bins is a fire hazard and illegal in many places.","trash":"Many 'trash' items are actually recyclable - double-check first.","clothes":"Wet or mouldy textiles ruin whole donation bags.","shoes":"Odd single shoes still have recycling value - keep pairs together."}};
@@ -223,47 +232,54 @@ const THEME = {
   hazardous:{c:css('--hazard'),t:css('--hazard-t'),label:'Hazardous — drop-off'},
   landfill:{c:css('--landfill'),t:css('--landfill-t'),label:'General waste'},
 };
-const SPK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
 const SUGGESTIONS=['Can I recycle this?','How do I clean it first?','Is it hazardous?'];
 
 let currentImage=null, item=null, history=[], stream=null, spokenText='';
+let voiceOn=true, audioUnlocked=false;
+
+/* language: two synced selects (home + header) */
+const curLang = () => $('lang').value;
+function setLang(v){ $('lang').value=v; $('lang2').value=v; if(item && !$('result').hidden) openingGuidance(item); }
+$('lang').onchange  = () => setLang($('lang').value);
+$('lang2').onchange = () => setLang($('lang2').value);
+
+/* voice: auto-speak, with a mute toggle; unlock on first tap */
+$('mute').onclick = () => {
+  voiceOn=!voiceOn; $('mute').classList.toggle('off', !voiceOn);
+  $('muteIcon').innerHTML = voiceOn
+    ? '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>'
+    : '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/>';
+  if(!voiceOn){ $('player').pause(); $('speaking').classList.remove('on'); }
+};
+document.addEventListener('pointerdown', ()=>{ if(!audioUnlocked){ const p=$('player'); p.src=SILENT; p.play().then(()=>{audioUnlocked=true;}).catch(()=>{}); } }, {once:true});
 
 $('shoot').onclick  = openCamera;
 $('upload').onclick = () => $('gal').click();
-$('cancelCam').onclick = () => reset();
+$('cancelCam').onclick = reset;
 $('shutter').onclick = capture;
 $('gal').onchange = e => e.target.files[0] && fromFile(e.target.files[0]);
 $('identify').onclick = identify;
 $('again').onclick = reset;
 $('sendBtn').onclick = () => send($('q').value);
 $('q').addEventListener('keydown', e => { if(e.key==='Enter') send($('q').value); });
-// Seamless language switch: re-do the "What to do" summary in the new language.
-$('lang').onchange = () => { if(item && !$('result').hidden) openingGuidance(item); };
 
-/* ---------- in-page camera (no app switch = no "Aw Snap") ---------- */
+/* ---------- in-page camera ---------- */
 async function openCamera(){
   setStatus('');
-  if(!navigator.mediaDevices?.getUserMedia){ $('gal').click(); return; }  // old browser -> file picker
+  if(!navigator.mediaDevices?.getUserMedia){ $('gal').click(); return; }
   try{
     stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}, audio:false});
     const v=$('video'); v.srcObject=stream; await v.play();
     $('intro').hidden=true; $('stage').hidden=false; $('result').hidden=true;
-    v.hidden=false; $('preview').hidden=true;
-    $('shutter').hidden=false; $('camhint').hidden=false;
+    v.hidden=false; $('preview').hidden=true; $('shutter').hidden=false; $('camhint').hidden=false;
     $('startRow').hidden=true; $('identify').hidden=true; $('again').hidden=true; $('cancelCam').hidden=false;
-  }catch(err){
-    // permission denied or no camera -> fall back to gallery/file upload
-    setStatus('Camera unavailable — choose a photo instead.');
-    $('gal').click();
-  }
+  }catch(err){ setStatus('Camera unavailable — choose a photo instead.'); $('gal').click(); }
 }
 function capture(){
   const v=$('video'); if(!v.videoWidth) return;
-  const s=Math.min(1, 512/Math.max(v.videoWidth, v.videoHeight));
-  const c=document.createElement('canvas');
-  c.width=Math.round(v.videoWidth*s); c.height=Math.round(v.videoHeight*s);
-  c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-  currentImage=c.toDataURL('image/jpeg',0.85);
+  const s=Math.min(1,512/Math.max(v.videoWidth,v.videoHeight));
+  const c=document.createElement('canvas'); c.width=Math.round(v.videoWidth*s); c.height=Math.round(v.videoHeight*s);
+  c.getContext('2d').drawImage(v,0,0,c.width,c.height); currentImage=c.toDataURL('image/jpeg',0.85);
   stopStream();
   $('video').hidden=true; $('shutter').hidden=true; $('camhint').hidden=true; $('cancelCam').hidden=true;
   const img=$('preview'); img.src=currentImage; img.hidden=false;
@@ -271,22 +287,19 @@ function capture(){
 }
 function stopStream(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $('video').srcObject=null; }
 
-/* ---------- upload path (memory-safe decode) ---------- */
+/* ---------- upload (memory-safe) ---------- */
 async function fromFile(file){
   setStatus('');
   try{
-    let w,h,canvas=document.createElement('canvas'), ctx=canvas.getContext('2d');
+    let w,h,c=document.createElement('canvas'),ctx=c.getContext('2d');
     if('createImageBitmap' in window){
-      const bmp=await createImageBitmap(file);
-      const s=Math.min(1,512/Math.max(bmp.width,bmp.height));
-      w=Math.round(bmp.width*s); h=Math.round(bmp.height*s);
-      canvas.width=w; canvas.height=h; ctx.drawImage(bmp,0,0,w,h); bmp.close?.();
+      const bmp=await createImageBitmap(file); const s=Math.min(1,512/Math.max(bmp.width,bmp.height));
+      w=Math.round(bmp.width*s); h=Math.round(bmp.height*s); c.width=w; c.height=h; ctx.drawImage(bmp,0,0,w,h); bmp.close?.();
     }else{
       const url=URL.createObjectURL(file);
-      await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ const s=Math.min(1,512/Math.max(im.width,im.height)); w=Math.round(im.width*s); h=Math.round(im.height*s); canvas.width=w; canvas.height=h; ctx.drawImage(im,0,0,w,h); URL.revokeObjectURL(url); res(); }; im.onerror=rej; im.src=url; });
+      await new Promise((res,rej)=>{const im=new Image(); im.onload=()=>{const s=Math.min(1,512/Math.max(im.width,im.height)); w=Math.round(im.width*s); h=Math.round(im.height*s); c.width=w; c.height=h; ctx.drawImage(im,0,0,w,h); URL.revokeObjectURL(url); res();}; im.onerror=rej; im.src=url;});
     }
-    currentImage=canvas.toDataURL('image/jpeg',0.85);
-    stopStream();
+    currentImage=c.toDataURL('image/jpeg',0.85); stopStream();
     $('intro').hidden=true; $('stage').hidden=false; $('result').hidden=true;
     $('video').hidden=true; $('shutter').hidden=true; $('camhint').hidden=true; $('cancelCam').hidden=true;
     const img=$('preview'); img.src=currentImage; img.hidden=false;
@@ -306,66 +319,54 @@ async function identify(){
   finally{ $('stage').classList.remove('busy'); $('identify').disabled=false; $('identify').hidden=true; }
 }
 
-function buildItem(cls, confidence, top3){
+function buildItem(cls, confidence, top3, source){
   const b=META.bin_info[cls];
-  return {class:cls, confidence, bin:{type:b.bin, emoji:b.emoji}, hazardous:b.hazardous,
-          recyclable:b.bin==='recycle', instructions:META.instructions[cls], common_mistake:META.common_mistakes[cls], top3:top3||[]};
+  return {class:cls, confidence, bin:{type:b.bin,emoji:b.emoji}, hazardous:b.hazardous, recyclable:b.bin==='recycle',
+          instructions:META.instructions[cls], common_mistake:META.common_mistakes[cls], top3:top3||[], source:source||'manual'};
 }
-
 function showResult(r){ item=r; renderItem(); $('stage').hidden=true; $('result').hidden=false; }
 
-// Re-render hero + guidance for the current item (used for first result AND corrections).
 function renderItem(){
   const r=item, th=THEME[r.bin.type]||THEME.landfill;
   document.documentElement.style.setProperty('--accent', th.c);
   document.documentElement.style.setProperty('--accent-t', th.t);
-  $('rEmoji').textContent=r.bin.emoji;
-  $('rItem').textContent=r.class;
-  $('rBin').innerHTML=`${r.bin.emoji} ${th.label}`;
-  if(r.confidence==null){ $('rMeterWrap').hidden=true; $('rConf').textContent='You picked this'; }
+  $('rEmoji').textContent=r.bin.emoji; $('rItem').textContent=r.class; $('rBin').innerHTML=`${r.bin.emoji} ${th.label}`;
+
+  if(r.source==='ai_vision'){ $('rMeterWrap').hidden=true; $('rConf').textContent='Identified by AI vision'; }
+  else if(r.confidence==null){ $('rMeterWrap').hidden=true; $('rConf').textContent='You picked this'; }
   else { $('rMeterWrap').hidden=false; requestAnimationFrame(()=> $('rMeter').style.width=`${Math.round(r.confidence*100)}%`); $('rConf').textContent=`${Math.round(r.confidence*100)}% confident`; }
 
   const badges=[ r.recyclable?'✓ Recyclable':'✗ Not recyclable' ];
   if(r.hazardous) badges.push('⚠️ Handle with care');
+  if(r.source==='ai_vision'){ badges.push('✨ AI vision'); if(r.agree) badges.push('✓ model agrees'); }
   $('rBadges').innerHTML=badges.map(b=>`<span class="badge">${b}</span>`).join('');
 
-  // correction UI: show when low confidence, offer top-3 + full list
-  $('correct').hidden = !(r.confidence!=null && r.confidence<0.6);
+  $('correct').hidden = !(r.source!=='ai_vision' && r.confidence!=null && r.confidence<0.6);
   const alts=(r.top3||[]).filter(g=>g.class!==r.class);
-  let html = alts.length ? `<span class="glabel">Or:</span>` + alts.map(g=>`<button class="guess" data-c="${g.class}">${g.class} ${Math.round(g.confidence*100)}%</button>`).join('') : '';
+  let html = alts.length ? `<span class="glabel">Or:</span>`+alts.map(g=>`<button class="guess" data-c="${g.class}">${g.class} ${Math.round(g.confidence*100)}%</button>`).join('') : '';
   html += `<select class="pickall" id="pickall"><option value="">Something else…</option>${META.classes.filter(c=>c!==r.class).map(c=>`<option value="${c}">${c}</option>`).join('')}</select>`;
-  $('rGuesses').innerHTML = html;
+  $('rGuesses').innerHTML=html;
   [...document.querySelectorAll('.guess')].forEach(b=> b.onclick=()=>correctTo(b.dataset.c));
   $('pickall').onchange = e => { if(e.target.value) correctTo(e.target.value); };
 
-  // reset chat + chips
   history=[]; $('thread').innerHTML='';
   $('chips').innerHTML=SUGGESTIONS.map(s=>`<button class="chip">${s}</button>`).join('');
   [...$('chips').children].forEach(c=> c.onclick=()=>send(c.textContent));
 
   openingGuidance(r);
 }
+function correctTo(cls){ const prev=item.top3; const m=(prev||[]).find(g=>g.class===cls); item=buildItem(cls, m?m.confidence:null, prev, 'manual'); renderItem(); }
 
-function correctTo(cls){
-  const prev=item.top3;
-  const match=(prev||[]).find(g=>g.class===cls);
-  item=buildItem(cls, match?match.confidence:null, prev);
-  renderItem();
-}
-
-/* ---------- Groq: localised "what to do" + chat ---------- */
+/* ---------- Groq: localised guidance + chat (auto-spoken) ---------- */
 async function openingGuidance(r){
-  const el=$('doText');
-  const fallback=`${r.instructions} Watch out: ${r.common_mistake}`;
+  const el=$('doText'); const fallback=`${r.instructions} Watch out: ${r.common_mistake}`;
   el.innerHTML='<span class="thinking"><span class="dot"></span>Getting tips in your language…</span>';
-  $('doSpeak').hidden=false;
-  spokenText=`This is ${r.class}. ${fallback}`;
-  $('doSpeak').onclick=()=>speak(spokenText,$('doSpeak'));
   try{
-    const g=await post('/api/chat',{label:r.class,bin:r.bin.type,confidence:r.confidence||0,lang:$('lang').value,messages:[]});
-    if(g && g.text){ el.textContent=g.text; spokenText=g.text; history=[{role:'assistant',content:g.text}]; }
-    else el.textContent=fallback;
-  }catch{ el.textContent=fallback; }
+    const g=await post('/api/chat',{label:r.class,bin:r.bin.type,confidence:r.confidence||0,lang:curLang(),messages:[]});
+    const text=(g&&g.text)?g.text:fallback;
+    el.textContent=text; spokenText=text; history=(g&&g.text)?[{role:'assistant',content:text}]:[];
+    autoSpeak(text);
+  }catch{ el.textContent=fallback; spokenText=fallback; autoSpeak(fallback); }
 }
 
 async function send(text){
@@ -374,30 +375,34 @@ async function send(text){
   addMe(text); history.push({role:'user',content:text});
   const row=addBotRow(); thinking(row);
   try{
-    const r=await post('/api/chat',{label:item.class,bin:item.bin.type,confidence:item.confidence||0,lang:$('lang').value,messages:history});
+    const r=await post('/api/chat',{label:item.class,bin:item.bin.type,confidence:item.confidence||0,lang:curLang(),messages:history});
     if(r.error||!r.text) throw new Error(r.error||'no text');
-    fillBot(row,r.text); history.push({role:'assistant',content:r.text});
+    fillBot(row,r.text); history.push({role:'assistant',content:r.text}); autoSpeak(r.text);
   }catch(err){ fillBot(row,'Sorry, I could not answer that just now. Please try again.'); console.error(err); }
 }
 
 function addMe(t){ const d=document.createElement('div'); d.className='msg me'; d.textContent=t; $('thread').appendChild(d); see(); }
-function addBotRow(){ const r=document.createElement('div'); r.className='botrow'; $('thread').appendChild(r); see(); return r; }
-function thinking(row){ row.innerHTML='<div class="msg bot"><span class="thinking"><span class="dot"></span>Thinking…</span></div>'; see(); }
-function fillBot(row,text){ row.innerHTML=''; const b=document.createElement('div'); b.className='msg bot'; b.textContent=text; const m=document.createElement('button'); m.className='mini'; m.innerHTML=SPK+'<span>Listen</span>'; m.onclick=()=>speak(text,m); row.append(b,m); see(); }
+function addBotRow(){ const r=document.createElement('div'); r.className='msg bot'; $('thread').appendChild(r); see(); return r; }
+function thinking(row){ row.innerHTML='<span class="thinking"><span class="dot"></span>Thinking…</span>'; see(); }
+function fillBot(row,text){ row.textContent=text; see(); }
 function see(){ $('thread').lastElementChild?.scrollIntoView({block:'nearest'}); }
 
-async function speak(text,btn){
-  btn.disabled=true;
+/* ---------- voice (automatic, no play buttons) ---------- */
+function autoSpeak(text){ if(voiceOn && text) speak(text); }
+async function speak(text){
+  if(!voiceOn) return;
   try{
-    const r=await post('/api/tts',{text,language_code:$('lang').value});
-    if(r.error||!r.audio) throw new Error(r.error||'no audio');
-    const p=$('player'); p.src=`data:${r.mime||'audio/mpeg'};base64,${r.audio}`; await p.play();
-  }catch(err){ setStatus('Voice is unavailable right now.'); console.error(err); }
-  finally{ btn.disabled=false; }
+    const r=await post('/api/tts',{text,language_code:curLang()});
+    if(r.error||!r.audio) return;
+    const p=$('player'); p.src=`data:${r.mime||'audio/mpeg'};base64,${r.audio}`;
+    $('speaking').classList.add('on');
+    p.onended=()=>$('speaking').classList.remove('on');
+    await p.play().catch(()=>$('speaking').classList.remove('on'));
+  }catch(err){ $('speaking').classList.remove('on'); console.error(err); }
 }
 
 function reset(){
-  stopStream();
+  stopStream(); $('player').pause(); $('speaking').classList.remove('on');
   currentImage=null; item=null; history=[]; spokenText='';
   $('preview').src=''; $('preview').hidden=true; $('video').hidden=true;
   $('stage').hidden=true; $('stage').classList.remove('busy');
@@ -408,12 +413,8 @@ function reset(){
   document.documentElement.style.setProperty('--accent', css('--recycle'));
   document.documentElement.style.setProperty('--accent-t', css('--recycle-t'));
 }
-
 function setStatus(t){ $('status').textContent=t; }
-async function post(url,body){
-  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  return res.json();
-}
+async function post(url,body){ const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return res.json(); }
 </script>
 </body>
 </html>
