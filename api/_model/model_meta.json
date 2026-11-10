@@ -1,0 +1,134 @@
+{
+  "classes": [
+    "plastic",
+    "glass",
+    "metal",
+    "cardboard",
+    "paper",
+    "biological",
+    "battery",
+    "trash",
+    "clothes",
+    "shoes",
+    "vegetation"
+  ],
+  "class_to_idx": {
+    "plastic": 0,
+    "glass": 1,
+    "metal": 2,
+    "cardboard": 3,
+    "paper": 4,
+    "biological": 5,
+    "battery": 6,
+    "trash": 7,
+    "clothes": 8,
+    "shoes": 9,
+    "vegetation": 10
+  },
+  "bin_info": {
+    "plastic": {
+      "bin": "recycle",
+      "color": "blue",
+      "emoji": "♻️",
+      "hazardous": false
+    },
+    "glass": {
+      "bin": "recycle",
+      "color": "blue",
+      "emoji": "♻️",
+      "hazardous": false
+    },
+    "metal": {
+      "bin": "recycle",
+      "color": "blue",
+      "emoji": "♻️",
+      "hazardous": false
+    },
+    "cardboard": {
+      "bin": "recycle",
+      "color": "blue",
+      "emoji": "♻️",
+      "hazardous": false
+    },
+    "paper": {
+      "bin": "recycle",
+      "color": "blue",
+      "emoji": "♻️",
+      "hazardous": false
+    },
+    "biological": {
+      "bin": "compost",
+      "color": "brown",
+      "emoji": "🟤",
+      "hazardous": false
+    },
+    "vegetation": {
+      "bin": "compost",
+      "color": "brown",
+      "emoji": "🟤",
+      "hazardous": false
+    },
+    "battery": {
+      "bin": "hazardous",
+      "color": "red",
+      "emoji": "⚠️",
+      "hazardous": true
+    },
+    "trash": {
+      "bin": "landfill",
+      "color": "black",
+      "emoji": "🗑️",
+      "hazardous": false
+    },
+    "clothes": {
+      "bin": "landfill",
+      "color": "black",
+      "emoji": "🗑️",
+      "hazardous": false
+    },
+    "shoes": {
+      "bin": "landfill",
+      "color": "black",
+      "emoji": "🗑️",
+      "hazardous": false
+    }
+  },
+  "instructions": {
+    "plastic": "Empty, rinse and dry it, then put it in the recycling bin. Leave caps on.",
+    "glass": "Rinse the glass and place it in the recycling bin. Do not break it first.",
+    "metal": "Rinse cans and foil, then recycle. Crush cans to save space.",
+    "cardboard": "Flatten the cardboard and keep it dry before recycling.",
+    "paper": "Keep paper clean and dry, then recycle. No greasy or wet paper.",
+    "biological": "Put food scraps in the compost or green/organic bin.",
+    "vegetation": "Add garden and plant waste to the compost or green bin.",
+    "battery": "Do NOT bin batteries. Drop them at a battery / e-waste collection point.",
+    "trash": "This goes in the general landfill bin.",
+    "clothes": "Reuse or donate if wearable; otherwise textile-recycle or landfill.",
+    "shoes": "Donate wearable shoes; otherwise place in the general waste bin."
+  },
+  "common_mistakes": {
+    "plastic": "People leave food residue inside, which contaminates a whole batch.",
+    "glass": "Broken glass and drinking glasses/Pyrex are often not accepted - check locally.",
+    "metal": "Small foil balls and bottle caps are frequently missed by sorters.",
+    "cardboard": "Greasy pizza boxes are not recyclable - tear off clean parts only.",
+    "paper": "Shredded paper and laminated paper usually cannot be recycled.",
+    "biological": "Compostable plastics are often mistaken for real compost - they are not.",
+    "vegetation": "Treated or painted wood should not go in green waste.",
+    "battery": "Throwing batteries in normal bins is a fire hazard and illegal in many places.",
+    "trash": "Many \"trash\" items are actually recyclable - double-check first.",
+    "clothes": "Wet or mouldy textiles ruin whole donation bags.",
+    "shoes": "Odd single shoes still have recycling value - keep pairs together."
+  },
+  "img_size": 192,
+  "mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "best_val_acc": 0.9363957597173145
+}
