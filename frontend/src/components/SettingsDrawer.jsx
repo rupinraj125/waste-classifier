@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Volume2, Play, Square, BarChart2, Zap, MessageCircle, MapPin, Gauge, Search } from 'lucide-react'
+import { X, Volume2, Play, Square, BarChart2, Zap, MessageCircle, MapPin, Gauge, Search, Server } from 'lucide-react'
 import { VOICES, LANGUAGES, VOICE_PREVIEWS, TTS_SPEEDS, CITIES } from '../constants.js'
+import QuotaCard from './QuotaCard.jsx'
 
 // ── Single voice card ──────────────────────────────────────────────────────
 function VoiceCard({ v, active, onSelect, onPreview, playingId }) {
@@ -196,6 +197,7 @@ export default function SettingsDrawer({
                 <button style={tabStyle('voice')} onClick={() => setTab('voice')}>🎙 Voice</button>
                 <button style={tabStyle('city')}  onClick={() => setTab('city')}>🏙 City</button>
                 <button style={tabStyle('usage')} onClick={() => setTab('usage')}>📊 Usage</button>
+                <button style={tabStyle('api')}   onClick={() => setTab('api')}>🔌 API</button>
               </div>
             </div>
 
@@ -348,6 +350,9 @@ export default function SettingsDrawer({
                   </p>
                 </div>
               )}
+
+              {/* ── API TAB ───────────────────────────────────── */}
+              {tab === 'api' && <QuotaCard />}
 
             </div>
           </motion.div>

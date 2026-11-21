@@ -3,7 +3,8 @@
   "functions": {
     "api/classify.py": { "memory": 1024, "maxDuration": 30, "includeFiles": "api/_model/**" },
     "api/chat.py":     { "maxDuration": 30 },
-    "api/tts.py":      { "maxDuration": 30 }
+    "api/tts.py":      { "maxDuration": 30 },
+    "api/quota.py":    { "maxDuration": 15 }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
