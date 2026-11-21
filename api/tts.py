@@ -2,15 +2,16 @@
 POST /api/tts
 body: { "text", "language_code", "speaker", "full", "pace" }
 
-Uses Sarvam bulbul:v3. Pitch and pace are tuned per language for natural emotion.
-bulbul:v3 accepts pitch in range -1.0 to 1.0 (0.0 = neutral).
+Uses Sarvam bulbul:v4 (latest — improved naturalness over v3).
+Pitch and pace are tuned per language for natural emotion.
+bulbul:v4 accepts pitch in range -1.0 to 1.0 (0.0 = neutral).
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, re, urllib.request, urllib.error
 
 KEY   = os.environ.get("SARVAM_API_KEY", "").strip()
 URL   = "https://api.sarvam.ai/text-to-speech"
-MODEL = "bulbul:v3"
+MODEL = "bulbul:v4"   # latest Sarvam model — improved naturalness
 
 # Tuned per language: speaker, pace, pitch
 # pitch:  >0 = higher/brighter,  <0 = deeper/warmer

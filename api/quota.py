@@ -38,18 +38,16 @@ def check_gemini():
 
 
 def check_sarvam():
-    """Sarvam AI — check if they have a quota/usage endpoint."""
+    """Sarvam AI — test with minimal call to verify key and check credits."""
     if not SARVAM_KEY:
-        return {"error": "No API key"}
+        return {"error": "No API key", "status": "inactive"}
     
-    # Try fetching account info or usage from Sarvam
-    # Sarvam doesn't document a /quota endpoint, so we'll test with a minimal TTS call
     try:
         url = "https://api.sarvam.ai/text-to-speech"
         payload = json.dumps({
             "text": "test",
             "language_code": "en-IN",
-            "model": "bulbul:v3",
+            "model": "bulbul:v4",
             "speaker": "shubh",
         }).encode()
         req = urllib.request.Request(
@@ -61,20 +59,33 @@ def check_sarvam():
         )
         with urllib.request.urlopen(req, timeout=10) as r:
             resp = json.loads(r.read())
-            # If successful, key is active
+            # Successful — key active
             return {
                 "status": "active",
                 "plan": "Pay-as-you-go",
-                "note": "Check dashboard.sarvam.ai for usage",
+                "model": "bulbul:v4",
+                "note": "Check dashboard.sarvam.ai for credits",
             }
     except urllib.error.HTTPError as e:
-        err = e.read().decode()[:200]
+        err_body = e.read().decode()[:300]
         if e.code == 401 or e.code == 403:
             return {"error": "Invalid or expired API key", "status": "inactive"}
+        elif e.code == 402:
+            # No credits — parse the error message
+            try:
+                err_json = json.loads(err_body)
+                err_msg = err_json.get("error", {}).get("message", "No credits")
+            except:
+                err_msg = "Insufficient credits"
+            return {
+                "error": err_msg,
+                "status": "inactive",
+                "note": "Add credits at dashboard.sarvam.ai",
+            }
         elif e.code == 429:
             return {"error": "Rate limit exceeded", "status": "limited"}
         else:
-            return {"error": f"HTTP {e.code}: {err}", "status": "unknown"}
+            return {"error": f"HTTP {e.code}", "status": "unknown", "note": err_body[:100]}
     except Exception as e:
         return {"error": str(e)[:100], "status": "unknown"}
 
