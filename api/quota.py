@@ -39,46 +39,56 @@ def check_gemini():
 
 
 def check_sarvam():
-    """Sarvam AI — test primary + fallback keys."""
+    """Sarvam AI — test primary + fallback keys, return both statuses."""
     if not SARVAM_KEY and not SARVAM_KEY_FALLBACK:
         return {"error": "No API keys configured", "status": "inactive"}
     
-    results = []
+    primary_status = None
+    fallback_status = None
     
     # Check primary key
     if SARVAM_KEY:
-        status = _test_sarvam_key(SARVAM_KEY, "Primary")
-        results.append(status)
+        primary_status = _test_sarvam_key(SARVAM_KEY, "Primary")
     
     # Check fallback key
     if SARVAM_KEY_FALLBACK:
-        status = _test_sarvam_key(SARVAM_KEY_FALLBACK, "Fallback")
-        results.append(status)
+        fallback_status = _test_sarvam_key(SARVAM_KEY_FALLBACK, "Fallback")
     
-    # Return combined status
-    active_count = sum(1 for r in results if r.get("status") == "active")
+    # Build response with details for both keys
+    keys = []
+    if primary_status:
+        keys.append({
+            "label": "Primary",
+            "status": primary_status.get("status", "unknown"),
+            "error": primary_status.get("error"),
+        })
+    if fallback_status:
+        keys.append({
+            "label": "Fallback",
+            "status": fallback_status.get("status", "unknown"),
+            "error": fallback_status.get("error"),
+        })
     
-    if active_count == len(results):
-        keys_label = f"{len(results)} key{'s' if len(results) > 1 else ''}"
-        return {
-            "status": "active",
-            "plan": "Pay-as-you-go",
-            "model": "bulbul:v3",
-            "note": f"✅ All {keys_label} active",
-        }
+    # Determine overall status
+    active_count = sum(1 for k in keys if k["status"] == "active")
+    
+    if active_count == len(keys):
+        overall_status = "active"
+        note = f"All {len(keys)} key(s) active"
     elif active_count > 0:
-        return {
-            "status": "active",
-            "plan": "Pay-as-you-go",
-            "model": "bulbul:v3",
-            "note": f"✅ {active_count}/{len(results)} key(s) active (fallback available)",
-        }
+        overall_status = "active"
+        note = f"{active_count}/{len(keys)} key(s) active"
     else:
-        return {
-            "error": results[0].get("error", "All keys exhausted"),
-            "status": "inactive",
-            "note": "Add credits at dashboard.sarvam.ai",
-        }
+        overall_status = "inactive"
+        note = "All keys exhausted or invalid"
+    
+    return {
+        "status": overall_status,
+        "plan": "Pay-as-you-go",
+        "model": "bulbul:v3",
+        "note": note,
+        "keys": keys,  # detailed status per key
+    }
 
 
 def _test_sarvam_key(api_key: str, label: str):

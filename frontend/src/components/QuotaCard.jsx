@@ -18,41 +18,62 @@ function ServiceRow({ name, data, color }) {
     <div style={{
       background: 'var(--s2)', border: '1px solid var(--ln)',
       borderRadius: 12, padding: '11px 13px',
-      display: 'flex', alignItems: 'center', gap: 11,
+      display: 'flex', flexDirection: 'column', gap: 8,
     }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-        background: `${color}22`, border: `1px solid ${color}44`,
-        display: 'grid', placeItems: 'center',
-      }}>
-        <Icon size={16} color={statusColor} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--tx)' }}>{name}</span>
-          {data.plan && (
-            <span style={{
-              fontSize: 9, fontWeight: 600, textTransform: 'uppercase',
-              background: `${color}22`, color,
-              padding: '2px 6px', borderRadius: 5,
-            }}>
-              {data.plan}
-            </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+          background: `${color}22`, border: `1px solid ${color}44`,
+          display: 'grid', placeItems: 'center',
+        }}>
+          <Icon size={16} color={statusColor} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--tx)' }}>{name}</span>
+            {data.plan && (
+              <span style={{
+                fontSize: 9, fontWeight: 600, textTransform: 'uppercase',
+                background: `${color}22`, color,
+                padding: '2px 6px', borderRadius: 5,
+              }}>
+                {data.plan}
+              </span>
+            )}
+          </div>
+          {data.error ? (
+            <div style={{ fontSize: 11, color: '#ef4444' }}>{data.error}</div>
+          ) : (
+            <>
+              {data.limit && (
+                <div style={{ fontSize: 11, color: 'var(--tx3)' }}>Limit: {data.limit}</div>
+              )}
+              {data.note && (
+                <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 2 }}>{data.note}</div>
+              )}
+            </>
           )}
         </div>
-        {data.error ? (
-          <div style={{ fontSize: 11, color: '#ef4444' }}>{data.error}</div>
-        ) : (
-          <>
-            {data.limit && (
-              <div style={{ fontSize: 11, color: 'var(--tx3)' }}>Limit: {data.limit}</div>
-            )}
-            {data.note && (
-              <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 2 }}>{data.note}</div>
-            )}
-          </>
-        )}
       </div>
+
+      {/* Show individual key status if multiple keys */}
+      {data.keys && data.keys.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 47 }}>
+          {data.keys.map((k, i) => {
+            const keyIcon = STATUS_ICON[k.status] || STATUS_ICON.unknown
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <keyIcon.Icon size={12} color={keyIcon.color} />
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx2)' }}>{k.label} Key</span>
+                {k.error && <span style={{ fontSize: 10, color: '#ef4444' }}>— {k.error}</span>}
+                {!k.error && k.status === 'active' && (
+                  <span style={{ fontSize: 10, color: '#22c55e' }}>✓ Active</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
