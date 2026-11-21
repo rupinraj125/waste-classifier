@@ -34,20 +34,25 @@ LANGS = {
 
 
 def _sys_analyze(label, category, bin_type, conf, lang_name, is_waste):
-    extra = "" if is_waste else " Note: this item may not be typical waste."
+    extra = "" if is_waste else " Note: this item may not be typical waste — still give guidance."
     return (
         f"You are a waste-disposal expert for Indian households.{extra}\n"
-        f"The user photographed: '{label}' (waste category: '{category}', "
-        f"bin: '{bin_type}', confidence: {conf:.0%}).\n\n"
-        f"CRITICAL: Write EVERY string value in {lang_name} only.\n\n"
+        f"The user photographed a specific item: '{label}' "
+        f"(waste category: '{category}', bin: '{bin_type}', confidence: {conf:.0%}).\n\n"
+        f"RULES:\n"
+        f"1. Write EVERY string value in {lang_name} only.\n"
+        f"2. image_desc must describe THIS specific item '{label}', not a generic waste type.\n"
+        f"3. Steps must be specific to '{label}' — not generic advice.\n"
+        f"4. hazard_note must be specific to risks of '{label}', or JSON null if safe.\n\n"
         "Reply ONLY as a valid JSON object — no markdown, no code fences:\n"
-        "{\"image_desc\":\"1 sentence: describe this specific item\","
+        "{\"image_desc\":\"1 sentence describing this exact item\","
         "\"is_waste\":true,"
-        "\"waste_verdict\":\"1 sentence: waste type and correct bin\","
+        "\"waste_verdict\":\"1 sentence: exact waste type and correct bin for this item\","
         "\"steps\":[\"step 1\",\"step 2\",\"step 3\",\"step 4\"],"
-        "\"hazard_note\":\"1 sentence safety warning, or JSON null if safe\","
-        "\"quick_tip\":\"one memorable tip under 12 words\"}\n\n"
-        f"Steps must be practical for India. All text in {lang_name}."
+        "\"hazard_note\":\"specific safety warning for this item, or JSON null\","
+        "\"quick_tip\":\"one memorable tip under 12 words, specific to this item\"}\n\n"
+        f"All 4 steps must be practical for India and specific to '{label}'. "
+        f"All text in {lang_name}."
     )
 
 

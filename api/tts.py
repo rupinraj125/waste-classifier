@@ -1,31 +1,32 @@
 """
-POST /api/tts  body: {"text": "...", "language_code": "en-IN"}
-Returns {"audio": "<base64 mp3>", "mime": "audio/mpeg"} via Sarvam Bulbul.
+POST /api/tts
+body: {
+  "text":          "...",
+  "language_code": "hi-IN",
+  "speaker":       "ishita",   ← optional, overrides SARVAM_SPEAKER
+  "full":          false        ← if true, send full text (not trimmed)
+}
+Returns {"audio": "<base64 mp3>", "mime": "audio/mpeg"}.
+Returns {"disabled": true} with 503 if SARVAM_API_KEY is unset.
 
-Speed optimisation: text is trimmed to the first sentence / 220 chars so
-Sarvam returns audio in ~1-2 s rather than 4-6 s for a long paragraph.
-Pass "full": true in the body to synthesise the entire text unchanged.
+Speed: text is trimmed to the first sentence / 220 chars by default
+so Sarvam responds in ~1-2 s. Pass full:true for "read all steps" mode.
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, re, urllib.request, urllib.error
 
-KEY     = os.environ.get("SARVAM_API_KEY")
+KEY     = os.environ.get("SARVAM_API_KEY", "").strip()
 URL     = "https://api.sarvam.ai/text-to-speech"
-MODEL   = os.environ.get("SARVAM_MODEL", "bulbul:v3")
-SPEAKER = os.environ.get("SARVAM_SPEAKER", "shubh")
-LANG    = os.environ.get("SARVAM_LANG", "en-IN")
-
-# Characters kept for fast-path (first meaningful sentence)
+MODEL   = os.environ.get("SARVAM_MODEL",   "bulbul:v3")
+DEFAULT_SPEAKER = os.environ.get("SARVAM_SPEAKER", "shubh")
 FAST_LIMIT = 220
 
 
 def _trim(text: str, full: bool) -> str:
-    """Return first sentence (up to FAST_LIMIT chars) unless full=True."""
     if full:
         return text[:2400]
-    # Split on sentence-ending punctuation followed by a space / end-of-string
     parts = re.split(r'(?<=[.!?।])\s+', text.strip())
-    out = ""
+    out   = ""
     for p in parts:
         candidate = (out + " " + p).strip()
         if len(candidate) <= FAST_LIMIT:
@@ -37,14 +38,14 @@ def _trim(text: str, full: bool) -> str:
     return out or text[:FAST_LIMIT]
 
 
-def synthesize(text: str, lang: str) -> str:
+def synthesize(text: str, lang: str, speaker: str) -> str:
     payload = json.dumps({
-        "text": text,
-        "language_code": lang,
-        "model": MODEL,
-        "speaker": SPEAKER,
+        "text":               text,
+        "language_code":      lang,
+        "model":              MODEL,
+        "speaker":            speaker,
         "output_audio_codec": "mp3",
-        "pace": 1.1,          # slightly faster speech
+        "pace":               1.05,
     }).encode()
     req = urllib.request.Request(
         URL, data=payload,
@@ -55,7 +56,7 @@ def synthesize(text: str, lang: str) -> str:
     audios = out.get("audios") or []
     if not audios:
         raise RuntimeError("Sarvam returned no audio.")
-    return audios[0]   # base64 mp3
+    return audios[0]
 
 
 class handler(BaseHTTPRequestHandler):
@@ -71,13 +72,14 @@ class handler(BaseHTTPRequestHandler):
         try:
             if not KEY:
                 return self._send(503, {"error": "SARVAM_API_KEY not set", "disabled": True})
-            n = int(self.headers.get("content-length", 0))
-            d = json.loads(self.rfile.read(n) or b"{}")
+            n        = int(self.headers.get("content-length", 0))
+            d        = json.loads(self.rfile.read(n) or b"{}")
             raw_text = (d.get("text") or "").strip()
             if not raw_text:
                 return self._send(400, {"error": "No text provided."})
-            text  = _trim(raw_text, bool(d.get("full")))
-            audio = synthesize(text, d.get("language_code", LANG))
+            speaker  = (d.get("speaker") or DEFAULT_SPEAKER).strip()
+            text     = _trim(raw_text, bool(d.get("full")))
+            audio    = synthesize(text, d.get("language_code", "en-IN"), speaker)
             self._send(200, {"audio": audio, "mime": "audio/mpeg"})
         except urllib.error.HTTPError as e:
             self._send(502, {"error": f"Sarvam error {e.code}: {e.read().decode()[:200]}"})
