@@ -3,418 +3,535 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Which Bin? — scan any waste</title>
-<meta name="theme-color" content="#FBFAF6" />
+<title>Which Bin?</title>
+<meta name="theme-color" content="#0f1117" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
-  :root{
-    --paper:#FBFAF6; --card:#FFFFFF; --ink:#141A16; --muted:#5B6A60; --line:#E6E2D8; --field:#F2EFE7;
-    --recycle:#1668E0; --recycle-t:#E7F0FD; --compost:#8A6A34; --compost-t:#F4ECDE;
-    --hazard:#CE3A2E; --hazard-t:#FBE7E5; --landfill:#59636E; --landfill-t:#ECEEF1;
-    --accent:var(--recycle); --accent-t:var(--recycle-t);
-    --sans:"Inter",system-ui,sans-serif; --display:"Bricolage Grotesque","Inter",system-ui,sans-serif;
-    --shadow:0 10px 30px rgba(20,26,22,.10);
-  }
-  *{box-sizing:border-box} html,body{margin:0}
-  body{background:var(--paper); color:var(--ink); font-family:var(--sans); line-height:1.5; -webkit-font-smoothing:antialiased;
-    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
-  .wrap{max-width:480px; margin:0 auto; min-height:100svh; display:flex; flex-direction:column; padding:18px 18px 22px}
+/* tokens */
+:root{
+  --bg:#0f1117; --surface:#181c27; --surface2:#1e2335; --border:#2a2f45;
+  --ink:#e8eaf0; --muted:#7b82a0; --faint:#2e3448;
+  --recycle:#3b82f6; --recycle-glow:rgba(59,130,246,.35);
+  --compost:#a16207;  --compost-glow:rgba(161,98,7,.35);
+  --hazardous:#ef4444;--hazardous-glow:rgba(239,68,68,.35);
+  --landfill:#64748b; --landfill-glow:rgba(100,116,139,.35);
+  --accent:var(--recycle); --glow:var(--recycle-glow);
+  --sans:"Inter",system-ui,sans-serif;
+  --display:"Syne","Inter",system-ui,sans-serif;
+  --radius:18px; --radius-sm:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--sans);
+  -webkit-font-smoothing:antialiased; line-height:1.55;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
 
-  header{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px}
-  .brand{display:flex; flex-direction:column; line-height:1.1}
-  .mark{font-family:var(--display); font-weight:800; font-size:24px; letter-spacing:-.02em}
-  .mark b{color:var(--accent)} .by{font-size:11px; color:var(--muted)}
-  .htools{display:flex; align-items:center; gap:8px}
-  .mute{width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow)}
-  .mute svg{width:19px;height:19px} .mute.off{color:var(--muted)}
-  .lang{font-family:var(--sans); font-size:13px; font-weight:500; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:11px; padding:9px 11px; box-shadow:var(--shadow)}
-  select:focus-visible,button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+/* layout */
+.wrap{
+  max-width:480px; margin:0 auto; min-height:100svh;
+  display:flex; flex-direction:column; padding:20px 20px 32px;
+}
 
-  main{flex:1; display:flex; flex-direction:column; gap:14px; padding-top:4px}
+/* header */
+header{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
+.brand{display:flex; align-items:center; gap:10px}
+.logo-ring{
+  width:38px; height:38px; border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,#fff));
+  display:grid; place-items:center; flex-shrink:0;
+  box-shadow:0 0 16px var(--glow);
+  transition:box-shadow .4s ease, background .4s ease;
+}
+.logo-ring svg{width:20px; height:20px; color:#fff}
+.wordmark{font-family:var(--display); font-weight:800; font-size:22px; letter-spacing:-.025em}
+.wordmark span{color:var(--accent); transition:color .4s ease}
+.lang{
+  font-family:var(--sans); font-size:13px; font-weight:500; color:var(--ink);
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:7px 10px; cursor:pointer; transition:border-color .2s;
+}
+.lang:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.lang:hover{border-color:var(--accent)}
 
-  .intro{display:flex; flex-direction:column; gap:14px; text-align:center; padding:12px 6px 2px}
-  .lens{width:70px; height:70px; border-radius:22px; background:var(--ink); color:var(--paper); display:grid; place-items:center; margin:2px auto 0; box-shadow:var(--shadow)}
-  .lens svg{width:33px;height:33px}
-  .intro h1{font-family:var(--display); font-weight:700; font-size:26px; letter-spacing:-.02em; margin:0}
-  .intro p{margin:0 auto; color:var(--muted); font-size:14.5px; max-width:30ch}
-  .bins{display:flex; flex-wrap:wrap; gap:8px; justify-content:center}
-  .bchip{font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:999px}
-  .langcard{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; text-align:left; margin-top:2px}
-  .langcard .lab{font-size:13.5px} .langcard .lab b{font-weight:600}
-  .langcard .lab span{display:block; color:var(--muted); font-size:12px}
-  .langcard select{font-family:var(--sans); font-size:15px; font-weight:600; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:11px; padding:10px 12px; min-width:118px}
+/* main */
+main{flex:1; display:flex; flex-direction:column; gap:14px; padding:10px 0}
 
-  .stage{position:relative; border-radius:22px; background:#000; aspect-ratio:4/5; overflow:hidden; box-shadow:var(--shadow)}
-  .stage[hidden]{display:none}
-  .stage video,.stage img{position:absolute; inset:0; width:100%; height:100%}
-  .stage video{object-fit:cover} .stage img{object-fit:contain}
-  .stage video[hidden],.stage img[hidden]{display:none}
-  .scan{position:absolute; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,#fff,transparent); opacity:0}
-  .stage.busy .scan{opacity:.9; animation:scan 1.3s ease-in-out infinite}
-  .stage.busy::after{content:"Identifying…"; position:absolute; bottom:12px; left:0; right:0; text-align:center; color:#fff; font-size:13px; font-weight:600; text-shadow:0 1px 4px rgba(0,0,0,.6)}
-  @keyframes scan{0%{top:6%}50%{top:92%}100%{top:6%}}
-  .shutter{position:absolute; bottom:16px; left:50%; transform:translateX(-50%); width:66px; height:66px; border-radius:50%; background:#fff; border:5px solid rgba(255,255,255,.45); cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.4)}
-  .shutter[hidden]{display:none}
-  .camhint{position:absolute; top:12px; left:0; right:0; text-align:center; color:#fff; font-size:12.5px; text-shadow:0 1px 4px rgba(0,0,0,.6)}
-  .camhint[hidden]{display:none}
+/* upload stage */
+.stage{
+  position:relative; border:2px dashed var(--border); border-radius:var(--radius);
+  background:var(--surface); aspect-ratio:4/5; display:flex;
+  flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:16px; overflow:hidden; cursor:pointer;
+  transition:border-color .25s, background .25s;
+}
+.stage:hover{border-color:var(--accent); background:color-mix(in srgb,var(--surface) 94%,var(--accent))}
+.stage.has-img{border-style:solid; background:#000; cursor:default}
+.stage.has-img:hover{background:#000; border-color:var(--accent)}
+.stage img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain}
 
-  .result{display:flex; flex-direction:column; gap:12px} .result[hidden]{display:none}
-  .hero{background:var(--accent); color:#fff; border-radius:22px; padding:22px 20px 18px; text-align:center; box-shadow:var(--shadow); animation:rise .32s ease both}
-  @keyframes rise{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
-  .hero .emoji{font-size:56px; line-height:1}
-  .hero .item{font-family:var(--display); font-weight:800; font-size:36px; letter-spacing:-.02em; text-transform:capitalize; margin:4px 0 8px}
-  .binpill{display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,.18); padding:7px 14px; border-radius:999px; font-weight:600; font-size:14.5px}
-  .meter{height:8px; border-radius:999px; background:rgba(255,255,255,.25); margin:14px 4px 6px; overflow:hidden} .meter[hidden]{display:none}
-  .meter span{display:block; height:100%; background:#fff; border-radius:999px; width:0; transition:width .5s ease}
-  .conf{font-size:12.5px; opacity:.92}
-  .badges{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:8px}
-  .badge{font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; background:rgba(255,255,255,.16)}
+.upload-hint{display:flex; flex-direction:column; align-items:center; gap:14px; padding:0 24px}
+.cam-icon{
+  width:68px; height:68px; border-radius:50%;
+  background:linear-gradient(135deg,var(--faint),var(--surface2));
+  border:1px solid var(--border); display:grid; place-items:center;
+}
+.cam-icon svg{width:30px; height:30px; color:var(--accent)}
+.upload-hint p{color:var(--muted); font-size:14px; max-width:20ch; line-height:1.5}
 
-  .correct{background:var(--hazard-t); border:1px solid #f3c9c4; color:#8a2b22; border-radius:14px; padding:11px 13px; font-size:13px} .correct[hidden]{display:none}
-  .guesses{display:flex; gap:7px; flex-wrap:wrap; align-items:center}
-  .glabel{font-size:12px; color:var(--muted)}
-  .guess{font-size:12.5px; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:7px 11px; cursor:pointer; text-transform:capitalize}
-  .guess:active{transform:scale(.97)}
-  .pickall{font-size:12.5px; border:1px dashed var(--line); background:transparent; color:var(--muted); border-radius:11px; padding:8px 10px}
+/* result overlay */
+.result{
+  position:absolute; inset:0;
+  background:linear-gradient(160deg,
+    color-mix(in srgb,var(--accent) 85%,#000) 0%,
+    color-mix(in srgb,var(--accent) 60%,#000) 100%);
+  color:#fff; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center;
+  gap:4px; padding:28px;
+  transition:background .5s ease;
+}
+.result[hidden]{display:none}
+.r-emoji{font-size:64px; line-height:1; filter:drop-shadow(0 4px 12px rgba(0,0,0,.4))}
+.r-class{
+  font-family:var(--display); font-weight:800; font-size:40px;
+  letter-spacing:-.03em; text-transform:capitalize; margin:4px 0 2px;
+  text-shadow:0 2px 16px rgba(0,0,0,.35);
+}
+.r-bin{font-weight:600; font-size:16px; opacity:.95}
+.r-conf{font-size:12px; opacity:.75; margin-top:2px}
+.r-haz{
+  margin-top:12px; font-weight:700; font-size:12px; letter-spacing:.04em;
+  background:rgba(0,0,0,.3); padding:6px 14px; border-radius:999px;
+  text-transform:uppercase; border:1px solid rgba(255,255,255,.25);
+}
 
-  .panel{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 16px 14px; box-shadow:var(--shadow)}
-  .panel h3{margin:0 0 7px; font-size:12.5px; font-weight:700; color:var(--muted); display:flex; align-items:center; gap:7px}
-  .panel h3 .ic{width:20px;height:20px;border-radius:7px;background:var(--accent-t); color:var(--accent); display:grid;place-items:center}
-  .panel h3 .ic svg{width:13px;height:13px}
-  .panel .body{font-size:15.5px}
-  .thinking{display:inline-flex; gap:6px; align-items:center; color:var(--muted); font-size:14.5px}
-  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite ease-in-out}
-  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
-  .speaking{display:none; align-items:center; gap:6px; color:var(--accent); font-size:12px; font-weight:600; margin-top:8px}
-  .speaking.on{display:inline-flex}
-  .wave{width:3px;height:11px;background:var(--accent);border-radius:2px;animation:wave .9s infinite ease-in-out}
-  .wave:nth-child(2){animation-delay:.15s}.wave:nth-child(3){animation-delay:.3s}
-  @keyframes wave{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+/* top-3 bar */
+.top3-bar{
+  position:absolute; bottom:0; left:0; right:0;
+  background:rgba(0,0,0,.55); backdrop-filter:blur(8px);
+  padding:10px 14px 12px; display:flex; gap:8px; justify-content:center;
+}
+.top3-bar[hidden]{display:none}
+.t3item{display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; max-width:90px}
+.t3label{font-size:10.5px; font-weight:600; opacity:.85; text-transform:capitalize; letter-spacing:.01em}
+.t3track{width:100%; height:4px; background:rgba(255,255,255,.18); border-radius:999px; overflow:hidden}
+.t3fill{height:100%; border-radius:999px; background:rgba(255,255,255,.85); transition:width .6s cubic-bezier(.4,0,.2,1)}
+.t3pct{font-size:9.5px; opacity:.65}
 
-  .ask h3{margin:0 0 9px}
-  .chips{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:10px}
-  .chip{font-size:12.5px; font-weight:500; background:var(--field); border:1px solid var(--line); color:var(--ink); border-radius:999px; padding:8px 12px; cursor:pointer} .chip:active{transform:scale(.97)}
-  .thread{display:flex; flex-direction:column; gap:9px} .thread:empty{display:none}
-  .msg{max-width:88%; padding:10px 13px; border-radius:15px; font-size:14.5px; white-space:pre-wrap; word-wrap:break-word}
-  .msg.bot{align-self:flex-start; background:var(--field); border:1px solid var(--line); border-bottom-left-radius:5px}
-  .msg.me{align-self:flex-end; background:var(--ink); color:var(--paper); border-bottom-right-radius:5px}
-  .composer{display:flex; gap:8px; margin-top:11px}
-  .composer input{flex:1; font-family:var(--sans); font-size:15px; border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px 13px; color:var(--ink)}
-  .composer input:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
-  .send{background:var(--accent); color:#fff; border:none; border-radius:12px; padding:0 15px; font-weight:600; cursor:pointer}
+/* chat */
+.chat{display:flex; flex-direction:column; gap:10px}
+.chat[hidden]{display:none}
+.thread{display:flex; flex-direction:column; gap:10px}
+.msg{
+  max-width:88%; padding:11px 14px; border-radius:16px;
+  font-size:14.5px; white-space:pre-wrap; word-wrap:break-word; line-height:1.55;
+}
+.msg.bot{
+  align-self:flex-start; background:var(--surface2); border:1px solid var(--border);
+  border-bottom-left-radius:5px;
+}
+.msg.me{
+  align-self:flex-end; color:#fff; border-bottom-right-radius:5px;
+  background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#fff));
+}
 
-  .actions{display:flex; flex-direction:column; gap:9px}
-  .row{display:flex; gap:9px}
-  .btn{flex:1; font-family:var(--sans); font-weight:600; font-size:15.5px; border:none; border-radius:14px; padding:15px 16px; cursor:pointer; transition:transform .08s ease; display:inline-flex; align-items:center; justify-content:center; gap:9px}
-  .btn:active{transform:scale(.98)} .btn svg{width:19px;height:19px}
-  button[disabled]{opacity:.5; cursor:default}
-  .primary{background:var(--ink); color:var(--paper)} .ghost{background:var(--card); color:var(--ink); border:1.5px solid var(--line)}
+.botrow{display:flex; flex-direction:column; align-items:flex-start; gap:5px; max-width:88%}
+.bot-meta{display:flex; align-items:center; gap:8px}
+.speak{
+  display:inline-flex; align-items:center; gap:5px; background:none; border:none;
+  cursor:pointer; color:var(--accent); font-weight:600; font-size:11.5px; padding:2px 0;
+}
+.speak svg{width:14px; height:14px}
+.speak:disabled{opacity:.45}
+.provider-tag{
+  font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--muted); background:var(--faint); border-radius:5px; padding:2px 6px;
+}
 
-  .status{min-height:18px; font-size:13px; color:var(--hazard); text-align:center}
-  footer{margin-top:16px; text-align:center}
-  footer .credit{font-family:var(--display); font-weight:700; font-size:13.5px} footer .credit a{color:var(--accent); text-decoration:none}
-  footer .fine{color:var(--muted); font-size:11px; margin-top:4px}
-  input[type=file]{display:none}
-  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.thinking{
+  display:inline-flex; gap:5px; align-items:center; color:var(--muted); font-size:14px;
+  padding:4px 0;
+}
+.dot{
+  width:7px; height:7px; border-radius:50%; background:var(--accent);
+  animation:pulse 1.1s infinite ease-in-out;
+}
+.dot:nth-child(2){animation-delay:.2s}
+.dot:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.2;transform:scale(.9)}50%{opacity:1;transform:scale(1)}}
+
+.composer{display:flex; gap:8px; align-items:flex-end}
+.composer input{
+  flex:1; font-family:var(--sans); font-size:14.5px;
+  border:1px solid var(--border); background:var(--surface2); border-radius:var(--radius-sm);
+  padding:12px 14px; color:var(--ink); transition:border-color .2s;
+}
+.composer input::placeholder{color:var(--muted)}
+.composer input:focus-visible{outline:none; border-color:var(--accent)}
+.send{
+  background:var(--accent); color:#fff; border:none; border-radius:var(--radius-sm);
+  padding:12px 18px; font-weight:600; font-size:14px; cursor:pointer;
+  transition:opacity .15s, transform .1s;
+  box-shadow:0 4px 16px var(--glow);
+}
+.send:hover{opacity:.88}
+.send:active{transform:scale(.96)}
+
+/* action buttons */
+.actions{display:flex; flex-direction:column; gap:9px}
+.btn{
+  font-family:var(--sans); font-weight:600; font-size:15px; border:none;
+  border-radius:var(--radius-sm); padding:15px 18px; cursor:pointer;
+  transition:transform .08s ease, opacity .15s; display:flex;
+  align-items:center; justify-content:center; gap:8px;
+}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn[disabled]{opacity:.45; cursor:default}
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#fff));
+  color:#fff; box-shadow:0 4px 20px var(--glow);
+}
+.btn-primary:hover:not([disabled]){opacity:.9}
+.btn-ghost{
+  background:var(--surface); color:var(--ink);
+  border:1px solid var(--border);
+}
+.btn-ghost:hover{border-color:var(--accent); color:var(--accent)}
+
+/* status */
+.status{min-height:18px; font-size:12.5px; color:var(--hazardous); text-align:center; letter-spacing:.01em}
+
+/* footer */
+footer{
+  color:var(--muted); font-size:11px; text-align:center;
+  margin-top:16px; line-height:1.6; padding:0 4px;
+}
+
+/* misc */
+input[type=file]{display:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
+
   <header>
-    <div class="brand"><span class="mark">Which <b>bin?</b></span><span class="by">by Rupin</span></div>
-    <div class="htools">
-      <button class="mute" id="mute" aria-label="Toggle voice" title="Voice on/off">
-        <svg id="muteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>
-      </button>
-      <select class="lang" id="lang" aria-label="Language">
-        <option value="en-IN">English</option><option value="hi-IN">हिन्दी</option><option value="ta-IN">தமிழ்</option>
-        <option value="te-IN">తెలుగు</option><option value="kn-IN">ಕನ್ನಡ</option><option value="ml-IN">മലയാളം</option>
-        <option value="mr-IN">मराठी</option><option value="gu-IN">ગુજરાતી</option><option value="bn-IN">বাংলা</option>
-        <option value="pa-IN">ਪੰਜਾਬੀ</option><option value="od-IN">ଓଡ଼ିଆ</option>
-      </select>
+    <div class="brand">
+      <div class="logo-ring" id="logoRing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 1 0 .49-4.95"/>
+        </svg>
+      </div>
+      <span class="wordmark">Which <span id="binWord">bin?</span></span>
     </div>
+    <select class="lang" id="lang" aria-label="Language for answers and voice">
+      <option value="en-IN">English</option>
+      <option value="hi-IN">हिन्दी</option>
+      <option value="ta-IN">தமிழ்</option>
+      <option value="te-IN">తెలుగు</option>
+      <option value="kn-IN">ಕನ್ನಡ</option>
+      <option value="ml-IN">മലയാളം</option>
+      <option value="mr-IN">मराठी</option>
+      <option value="gu-IN">ગુજરાતી</option>
+      <option value="bn-IN">বাংলা</option>
+      <option value="pa-IN">ਪੰਜਾਬੀ</option>
+      <option value="od-IN">ଓଡ਼ਿਆ</option>
+    </select>
   </header>
 
   <main>
-    <section class="intro" id="intro">
-      <div class="lens" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
-      <h1>Snap it. Sort it.</h1>
-      <p>Point your camera at any item and find out which bin it belongs in — with spoken guidance in your language.</p>
-      <div class="bins">
-        <span class="bchip" style="background:var(--recycle-t);color:var(--recycle)">♻️ Recycle</span>
-        <span class="bchip" style="background:var(--compost-t);color:var(--compost)">🟤 Compost</span>
-        <span class="bchip" style="background:var(--hazard-t);color:var(--hazard)">⚠️ Hazardous</span>
-        <span class="bchip" style="background:var(--landfill-t);color:var(--landfill)">🗑️ Landfill</span>
+    <div class="stage" id="stage" role="button" tabindex="0" aria-label="Tap to take or upload a photo">
+      <div class="upload-hint" id="uploadHint">
+        <div class="cam-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/>
+            <circle cx="12" cy="13" r="3.5"/>
+          </svg>
+        </div>
+        <p>Snap a photo of any item and we'll tell you exactly where it goes.</p>
       </div>
-      <div class="langcard">
-        <div class="lab"><b>Answers &amp; voice</b><span>Pick your language</span></div>
-        <select id="lang2" aria-label="Language">
-          <option value="en-IN">English</option><option value="hi-IN">हिन्दी</option><option value="ta-IN">தமிழ்</option>
-          <option value="te-IN">తెలుగు</option><option value="kn-IN">ಕನ್ನಡ</option><option value="ml-IN">മലയാളം</option>
-          <option value="mr-IN">मराठी</option><option value="gu-IN">ગુજરાતી</option><option value="bn-IN">বাংলা</option>
-          <option value="pa-IN">ਪੰਜਾਬੀ</option><option value="od-IN">ଓଡ଼ିଆ</option>
-        </select>
-      </div>
-    </section>
 
-    <div class="stage" id="stage" hidden>
-      <video id="video" playsinline muted hidden></video>
-      <img id="preview" alt="Your photo" hidden />
-      <div class="scan"></div>
-      <div class="camhint" id="camhint" hidden>Frame the item, then tap the button</div>
-      <button class="shutter" id="shutter" hidden aria-label="Capture photo"></button>
+      <img id="preview" alt="" hidden />
+
+      <div class="result" id="result" hidden>
+        <div class="r-emoji" id="rEmoji"></div>
+        <div class="r-class" id="rClass"></div>
+        <div class="r-bin"   id="rBin"></div>
+        <div class="r-conf"  id="rConf"></div>
+        <div class="r-haz"   id="rHaz" hidden>Handle with care</div>
+      </div>
+
+      <div class="top3-bar" id="top3Bar" hidden></div>
     </div>
 
-    <section class="result" id="result" hidden>
-      <div class="hero">
-        <div class="emoji" id="rEmoji"></div>
-        <div class="item" id="rItem"></div>
-        <div class="binpill" id="rBin"></div>
-        <div class="meter" id="rMeterWrap"><span id="rMeter"></span></div>
-        <div class="conf" id="rConf"></div>
-        <div class="badges" id="rBadges"></div>
-      </div>
-
-      <div class="correct" id="correct" hidden>Not fully sure on this one — if it's wrong, tap the right item below.</div>
-      <div class="guesses" id="rGuesses"></div>
-
-      <div class="panel">
-        <h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>What to do</h3>
-        <div class="body" id="doText"></div>
-        <div class="speaking" id="speaking"><span class="wave"></span><span class="wave"></span><span class="wave"></span> Speaking…</div>
-      </div>
-
-      <div class="panel ask">
-        <h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Ask about this item</h3>
-        <div class="chips" id="chips"></div>
-        <div class="thread" id="thread"></div>
-        <div class="composer"><input id="q" type="text" placeholder="Type a question…" autocomplete="off" /><button class="send" id="sendBtn">Send</button></div>
+    <section class="chat" id="chat" hidden>
+      <div class="thread" id="thread"></div>
+      <div class="composer">
+        <input id="q" type="text" placeholder="Ask anything about this item..." autocomplete="off" />
+        <button class="send btn" id="sendBtn" aria-label="Send">Send</button>
       </div>
     </section>
 
     <div class="actions">
-      <div class="row" id="startRow">
-        <button class="btn primary" id="shoot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/><circle cx="12" cy="13" r="3.5"/></svg>Take a photo</button>
-        <button class="btn ghost" id="upload">Upload</button>
-      </div>
-      <button class="btn ghost" id="cancelCam" hidden>Cancel</button>
-      <button class="btn primary" id="identify" hidden>Identify waste</button>
-      <button class="btn ghost" id="again" hidden>Scan another</button>
+      <button class="btn btn-primary" id="shoot">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2z"/>
+          <circle cx="12" cy="13" r="3.5"/>
+        </svg>
+        Take a photo
+      </button>
+      <button class="btn btn-primary" id="identify" hidden>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Identify waste
+      </button>
+      <button class="btn btn-ghost" id="again" hidden>Scan another item</button>
     </div>
 
     <div class="status" id="status" role="status" aria-live="polite"></div>
   </main>
 
   <footer>
-    <div class="credit">Developed by <a href="https://github.com/rupinraj125" target="_blank" rel="noopener">Rupin</a></div>
-    <div class="fine">EfficientNetV2 vision model, double-checked by AI when unsure · a guide, not a guarantee — follow local rules for hazardous items.</div>
+    EfficientNetV2 vision model (93.6% val acc) &middot;
+    chat by Gemini / Groq &middot; voice by Sarvam AI<br>
+    A guide, not a guarantee &mdash; always check local rules for hazardous items.
   </footer>
 </div>
 
-<input type="file" id="gal" accept="image/*" />
+<input type="file" id="file" accept="image/*" capture="environment" />
 <audio id="player" hidden></audio>
 
 <script>
 const $ = id => document.getElementById(id);
-const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const SILENT = "data:audio/wav;base64,UklGRhQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YfAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIA=";
+const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-const META = {"classes":["plastic","glass","metal","cardboard","paper","biological","battery","trash","clothes","shoes","vegetation"],
-"bin_info":{"plastic":{"bin":"recycle","emoji":"♻️","hazardous":false},"glass":{"bin":"recycle","emoji":"♻️","hazardous":false},"metal":{"bin":"recycle","emoji":"♻️","hazardous":false},"cardboard":{"bin":"recycle","emoji":"♻️","hazardous":false},"paper":{"bin":"recycle","emoji":"♻️","hazardous":false},"biological":{"bin":"compost","emoji":"🟤","hazardous":false},"vegetation":{"bin":"compost","emoji":"🟤","hazardous":false},"battery":{"bin":"hazardous","emoji":"⚠️","hazardous":true},"trash":{"bin":"landfill","emoji":"🗑️","hazardous":false},"clothes":{"bin":"landfill","emoji":"🗑️","hazardous":false},"shoes":{"bin":"landfill","emoji":"🗑️","hazardous":false}},
-"instructions":{"plastic":"Empty, rinse and dry it, then put it in the recycling bin. Leave caps on.","glass":"Rinse the glass and place it in the recycling bin. Do not break it first.","metal":"Rinse cans and foil, then recycle. Crush cans to save space.","cardboard":"Flatten the cardboard and keep it dry before recycling.","paper":"Keep paper clean and dry, then recycle. No greasy or wet paper.","biological":"Put food scraps in the compost or green/organic bin.","vegetation":"Add garden and plant waste to the compost or green bin.","battery":"Do NOT bin batteries. Drop them at a battery / e-waste collection point.","trash":"This goes in the general landfill bin.","clothes":"Reuse or donate if wearable; otherwise textile-recycle or landfill.","shoes":"Donate wearable shoes; otherwise place in the general waste bin."},
-"common_mistakes":{"plastic":"People leave food residue inside, which contaminates a whole batch.","glass":"Broken glass and drinking glasses/Pyrex are often not accepted - check locally.","metal":"Small foil balls and bottle caps are frequently missed by sorters.","cardboard":"Greasy pizza boxes are not recyclable - tear off clean parts only.","paper":"Shredded paper and laminated paper usually cannot be recycled.","biological":"Compostable plastics are often mistaken for real compost - they are not.","vegetation":"Treated or painted wood should not go in green waste.","battery":"Throwing batteries in normal bins is a fire hazard and illegal in many places.","trash":"Many 'trash' items are actually recyclable - double-check first.","clothes":"Wet or mouldy textiles ruin whole donation bags.","shoes":"Odd single shoes still have recycling value - keep pairs together."}};
-
-const THEME = {
-  recycle:{c:css('--recycle'),t:css('--recycle-t'),label:'Recycling'},
-  compost:{c:css('--compost'),t:css('--compost-t'),label:'Compost / wet waste'},
-  hazardous:{c:css('--hazard'),t:css('--hazard-t'),label:'Hazardous — drop-off'},
-  landfill:{c:css('--landfill'),t:css('--landfill-t'),label:'General waste'},
+const BINS = {
+  recycle:   {color:'--recycle',  glow:'--recycle-glow',  label:'Goes in the recycling bin'},
+  compost:   {color:'--compost',  glow:'--compost-glow',  label:'Goes in compost / wet waste'},
+  hazardous: {color:'--hazardous',glow:'--hazardous-glow',label:'Hazardous \u2014 special drop-off required'},
+  landfill:  {color:'--landfill', glow:'--landfill-glow', label:'Goes in general waste'},
 };
-const SUGGESTIONS=['Can I recycle this?','How do I clean it first?','Is it hazardous?'];
 
-let currentImage=null, item=null, history=[], stream=null, spokenText='';
-let voiceOn=true, audioUnlocked=false;
+const SPEAKER_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>`;
 
-/* language: two synced selects (home + header) */
-const curLang = () => $('lang').value;
-function setLang(v){ $('lang').value=v; $('lang2').value=v; if(item && !$('result').hidden) openingGuidance(item); }
-$('lang').onchange  = () => setLang($('lang').value);
-$('lang2').onchange = () => setLang($('lang2').value);
+let currentImage = null;
+let item = null;
+let history = [];
 
-/* voice: auto-speak, with a mute toggle; unlock on first tap */
-$('mute').onclick = () => {
-  voiceOn=!voiceOn; $('mute').classList.toggle('off', !voiceOn);
-  $('muteIcon').innerHTML = voiceOn
-    ? '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>'
-    : '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/>';
-  if(!voiceOn){ $('player').pause(); $('speaking').classList.remove('on'); }
-};
-document.addEventListener('pointerdown', ()=>{ if(!audioUnlocked){ const p=$('player'); p.src=SILENT; p.play().then(()=>{audioUnlocked=true;}).catch(()=>{}); } }, {once:true});
-
-$('shoot').onclick  = openCamera;
-$('upload').onclick = () => $('gal').click();
-$('cancelCam').onclick = reset;
-$('shutter').onclick = capture;
-$('gal').onchange = e => e.target.files[0] && fromFile(e.target.files[0]);
+$('shoot').onclick    = () => $('file').click();
+$('stage').onkeydown  = e => { if (e.key === 'Enter' || e.key === ' ') $('file').click(); };
+$('stage').onclick    = () => { if (!item && !currentImage) $('file').click(); };
+$('again').onclick    = reset;
 $('identify').onclick = identify;
-$('again').onclick = reset;
-$('sendBtn').onclick = () => send($('q').value);
-$('q').addEventListener('keydown', e => { if(e.key==='Enter') send($('q').value); });
+$('file').onchange    = e => { const f = e.target.files[0]; if (f) loadImage(f); e.target.value = ''; };
+$('sendBtn').onclick  = send;
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-/* ---------- in-page camera ---------- */
-async function openCamera(){
+function loadImage(file) {
+  const img = new Image();
+  img.onload = () => {
+    const max = 640, s = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    currentImage = c.toDataURL('image/jpeg', 0.88);
+    $('preview').src = currentImage; $('preview').hidden = false;
+    $('stage').classList.add('has-img');
+    $('uploadHint').hidden = true;
+    $('result').hidden = true; $('top3Bar').hidden = true;
+    $('chat').hidden = true;
+    $('shoot').hidden = true; $('identify').hidden = false; $('again').hidden = false;
+    setStatus('');
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+async function identify() {
+  if (!currentImage) return;
+  $('identify').disabled = true;
+  $('identify').innerHTML = `<span class="thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Analysing\u2026`;
   setStatus('');
-  if(!navigator.mediaDevices?.getUserMedia){ $('gal').click(); return; }
-  try{
-    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}, audio:false});
-    const v=$('video'); v.srcObject=stream; await v.play();
-    $('intro').hidden=true; $('stage').hidden=false; $('result').hidden=true;
-    v.hidden=false; $('preview').hidden=true; $('shutter').hidden=false; $('camhint').hidden=false;
-    $('startRow').hidden=true; $('identify').hidden=true; $('again').hidden=true; $('cancelCam').hidden=false;
-  }catch(err){ setStatus('Camera unavailable — choose a photo instead.'); $('gal').click(); }
+  try {
+    const r = await post('/api/classify', { image: currentImage });
+    if (r.error) throw new Error(r.error);
+    item = r; showResult(r);
+  } catch (err) {
+    setStatus('Could not identify that \u2014 try a clearer, closer photo.');
+    console.error(err);
+  } finally {
+    $('identify').disabled = false;
+    $('identify').innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Identify waste`;
+    $('identify').hidden = true;
+  }
 }
-function capture(){
-  const v=$('video'); if(!v.videoWidth) return;
-  const s=Math.min(1,512/Math.max(v.videoWidth,v.videoHeight));
-  const c=document.createElement('canvas'); c.width=Math.round(v.videoWidth*s); c.height=Math.round(v.videoHeight*s);
-  c.getContext('2d').drawImage(v,0,0,c.width,c.height); currentImage=c.toDataURL('image/jpeg',0.85);
-  stopStream();
-  $('video').hidden=true; $('shutter').hidden=true; $('camhint').hidden=true; $('cancelCam').hidden=true;
-  const img=$('preview'); img.src=currentImage; img.hidden=false;
-  $('identify').hidden=false; $('again').hidden=false;
-}
-function stopStream(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $('video').srcObject=null; }
 
-/* ---------- upload (memory-safe) ---------- */
-async function fromFile(file){
+function setAccent(binType) {
+  const b = BINS[binType] || BINS.landfill;
+  const color = cssVar(b.color);
+  const glow  = cssVar(b.glow);
+  document.documentElement.style.setProperty('--accent', color);
+  document.documentElement.style.setProperty('--glow',   glow);
+  $('logoRing').style.boxShadow = `0 0 20px ${glow}`;
+}
+
+function showResult(r) {
+  const bin = BINS[r.bin.type] || BINS.landfill;
+  setAccent(r.bin.type);
+  $('rEmoji').textContent = r.bin.emoji;
+  $('rClass').textContent = r.class;
+  $('rBin').textContent   = bin.label;
+  $('rConf').textContent  = `${Math.round(r.confidence * 100)}% confident`;
+  $('rHaz').hidden = !r.hazardous;
+  $('result').hidden = false;
+
+  if (r.top3 && r.top3.length) {
+    const bar = $('top3Bar');
+    bar.innerHTML = r.top3.map(t => `
+      <div class="t3item">
+        <div class="t3label">${t.class}</div>
+        <div class="t3track"><div class="t3fill" style="width:${Math.round(t.confidence*100)}%"></div></div>
+        <div class="t3pct">${Math.round(t.confidence*100)}%</div>
+      </div>`).join('');
+    bar.hidden = false;
+  }
+
+  history = [];
+  $('thread').innerHTML = '';
+  $('chat').hidden = false;
+  openingMessage();
+}
+
+async function openingMessage() {
+  const row = addBotRow(); setThinking(row);
+  try {
+    const r = await post('/api/chat', {
+      label: item.class, bin: item.bin.type, confidence: item.confidence,
+      lang: $('lang').value, messages: []
+    });
+    if (r.error || !r.text) throw new Error(r.error || 'no text');
+    fillBot(row, r.text, r.provider);
+    history.push({ role: 'assistant', content: r.text });
+  } catch (err) {
+    const fallback = `${item.class.charAt(0).toUpperCase() + item.class.slice(1)}: ${item.instructions} Watch out \u2014 ${item.common_mistake}`;
+    fillBot(row, fallback, 'offline');
+    history.push({ role: 'assistant', content: fallback });
+    console.warn('Chat fallback:', err);
+  }
+}
+
+async function send() {
+  const text = $('q').value.trim();
+  if (!text || !item) return;
+  $('q').value = '';
+  addMe(text);
+  history.push({ role: 'user', content: text });
+  const row = addBotRow(); setThinking(row);
+  try {
+    const r = await post('/api/chat', {
+      label: item.class, bin: item.bin.type, confidence: item.confidence,
+      lang: $('lang').value, messages: history
+    });
+    if (r.error || !r.text) throw new Error(r.error || 'no text');
+    fillBot(row, r.text, r.provider);
+    history.push({ role: 'assistant', content: r.text });
+  } catch (err) {
+    fillBot(row, 'Sorry, I could not answer that just now. Please try again.', null);
+    console.error(err);
+  }
+}
+
+function addMe(text) {
+  const d = document.createElement('div');
+  d.className = 'msg me'; d.textContent = text;
+  $('thread').appendChild(d); scroll();
+}
+
+function addBotRow() {
+  const row = document.createElement('div');
+  row.className = 'botrow';
+  $('thread').appendChild(row); scroll(); return row;
+}
+
+function setThinking(row) {
+  row.innerHTML = `<div class="msg bot"><span class="thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
+  scroll();
+}
+
+const PROVIDER_LABELS = { gemini: '\u2726 Gemini', groq: '\u26A1 Groq', fallback: 'offline', offline: 'offline' };
+
+function fillBot(row, text, provider) {
+  row.innerHTML = '';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg bot'; bubble.textContent = text;
+  row.appendChild(bubble);
+
+  const meta = document.createElement('div');
+  meta.className = 'bot-meta';
+
+  const btn = document.createElement('button');
+  btn.className = 'speak'; btn.innerHTML = SPEAKER_SVG + '<span>Listen</span>';
+  btn.onclick = () => speak(text, btn);
+  meta.appendChild(btn);
+
+  if (provider && PROVIDER_LABELS[provider]) {
+    const tag = document.createElement('span');
+    tag.className = 'provider-tag'; tag.textContent = PROVIDER_LABELS[provider];
+    meta.appendChild(tag);
+  }
+
+  row.appendChild(meta); scroll();
+}
+
+function scroll() { $('thread').lastElementChild?.scrollIntoView({ block: 'nearest' }); }
+
+async function speak(text, btn) {
+  btn.disabled = true;
+  try {
+    const r = await post('/api/tts', { text, language_code: $('lang').value });
+    if (r.error || !r.audio) throw new Error(r.error || 'no audio');
+    const p = $('player');
+    p.src = `data:${r.mime || 'audio/mpeg'};base64,${r.audio}`;
+    await p.play();
+  } catch (err) {
+    setStatus('Voice unavailable right now.'); console.error(err);
+  } finally { btn.disabled = false; }
+}
+
+function reset() {
+  currentImage = null; item = null; history = [];
+  $('preview').hidden = true; $('preview').src = '';
+  $('stage').classList.remove('has-img');
+  $('result').hidden = true; $('top3Bar').hidden = true;
+  $('chat').hidden = true; $('thread').innerHTML = '';
+  $('uploadHint').hidden = false;
+  $('identify').hidden = true; $('again').hidden = true; $('shoot').hidden = false;
   setStatus('');
-  try{
-    let w,h,c=document.createElement('canvas'),ctx=c.getContext('2d');
-    if('createImageBitmap' in window){
-      const bmp=await createImageBitmap(file); const s=Math.min(1,512/Math.max(bmp.width,bmp.height));
-      w=Math.round(bmp.width*s); h=Math.round(bmp.height*s); c.width=w; c.height=h; ctx.drawImage(bmp,0,0,w,h); bmp.close?.();
-    }else{
-      const url=URL.createObjectURL(file);
-      await new Promise((res,rej)=>{const im=new Image(); im.onload=()=>{const s=Math.min(1,512/Math.max(im.width,im.height)); w=Math.round(im.width*s); h=Math.round(im.height*s); c.width=w; c.height=h; ctx.drawImage(im,0,0,w,h); URL.revokeObjectURL(url); res();}; im.onerror=rej; im.src=url;});
-    }
-    currentImage=c.toDataURL('image/jpeg',0.85); stopStream();
-    $('intro').hidden=true; $('stage').hidden=false; $('result').hidden=true;
-    $('video').hidden=true; $('shutter').hidden=true; $('camhint').hidden=true; $('cancelCam').hidden=true;
-    const img=$('preview'); img.src=currentImage; img.hidden=false;
-    $('startRow').hidden=true; $('identify').hidden=false; $('again').hidden=false;
-  }catch(err){ setStatus('Could not read that image. Try another.'); console.error(err); }
+  document.documentElement.style.removeProperty('--accent');
+  document.documentElement.style.removeProperty('--glow');
+  $('logoRing').style.removeProperty('box-shadow');
 }
 
-/* ---------- classify ---------- */
-async function identify(){
-  if(!currentImage) return;
-  $('identify').disabled=true; $('stage').classList.add('busy'); setStatus('');
-  try{
-    const r=await post('/api/classify',{image:currentImage});
-    if(r.error) throw new Error(r.error);
-    showResult(r);
-  }catch(err){ setStatus('Could not identify that. Try a clearer, closer photo in good light.'); console.error(err); }
-  finally{ $('stage').classList.remove('busy'); $('identify').disabled=false; $('identify').hidden=true; }
+function setStatus(t) { $('status').textContent = t; }
+
+async function post(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
 }
-
-function buildItem(cls, confidence, top3, source){
-  const b=META.bin_info[cls];
-  return {class:cls, confidence, bin:{type:b.bin,emoji:b.emoji}, hazardous:b.hazardous, recyclable:b.bin==='recycle',
-          instructions:META.instructions[cls], common_mistake:META.common_mistakes[cls], top3:top3||[], source:source||'manual'};
-}
-function showResult(r){ item=r; renderItem(); $('stage').hidden=true; $('result').hidden=false; }
-
-function renderItem(){
-  const r=item, th=THEME[r.bin.type]||THEME.landfill;
-  document.documentElement.style.setProperty('--accent', th.c);
-  document.documentElement.style.setProperty('--accent-t', th.t);
-  $('rEmoji').textContent=r.bin.emoji; $('rItem').textContent=r.class; $('rBin').innerHTML=`${r.bin.emoji} ${th.label}`;
-
-  if(r.source==='ai_vision'){ $('rMeterWrap').hidden=true; $('rConf').textContent='Identified by AI vision'; }
-  else if(r.confidence==null){ $('rMeterWrap').hidden=true; $('rConf').textContent='You picked this'; }
-  else { $('rMeterWrap').hidden=false; requestAnimationFrame(()=> $('rMeter').style.width=`${Math.round(r.confidence*100)}%`); $('rConf').textContent=`${Math.round(r.confidence*100)}% confident`; }
-
-  const badges=[ r.recyclable?'✓ Recyclable':'✗ Not recyclable' ];
-  if(r.hazardous) badges.push('⚠️ Handle with care');
-  if(r.source==='ai_vision'){ badges.push('✨ AI vision'); if(r.agree) badges.push('✓ model agrees'); }
-  $('rBadges').innerHTML=badges.map(b=>`<span class="badge">${b}</span>`).join('');
-
-  $('correct').hidden = !(r.source!=='ai_vision' && r.confidence!=null && r.confidence<0.6);
-  const alts=(r.top3||[]).filter(g=>g.class!==r.class);
-  let html = alts.length ? `<span class="glabel">Or:</span>`+alts.map(g=>`<button class="guess" data-c="${g.class}">${g.class} ${Math.round(g.confidence*100)}%</button>`).join('') : '';
-  html += `<select class="pickall" id="pickall"><option value="">Something else…</option>${META.classes.filter(c=>c!==r.class).map(c=>`<option value="${c}">${c}</option>`).join('')}</select>`;
-  $('rGuesses').innerHTML=html;
-  [...document.querySelectorAll('.guess')].forEach(b=> b.onclick=()=>correctTo(b.dataset.c));
-  $('pickall').onchange = e => { if(e.target.value) correctTo(e.target.value); };
-
-  history=[]; $('thread').innerHTML='';
-  $('chips').innerHTML=SUGGESTIONS.map(s=>`<button class="chip">${s}</button>`).join('');
-  [...$('chips').children].forEach(c=> c.onclick=()=>send(c.textContent));
-
-  openingGuidance(r);
-}
-function correctTo(cls){ const prev=item.top3; const m=(prev||[]).find(g=>g.class===cls); item=buildItem(cls, m?m.confidence:null, prev, 'manual'); renderItem(); }
-
-/* ---------- Groq: localised guidance + chat (auto-spoken) ---------- */
-async function openingGuidance(r){
-  const el=$('doText'); const fallback=`${r.instructions} Watch out: ${r.common_mistake}`;
-  el.innerHTML='<span class="thinking"><span class="dot"></span>Getting tips in your language…</span>';
-  try{
-    const g=await post('/api/chat',{label:r.class,bin:r.bin.type,confidence:r.confidence||0,lang:curLang(),messages:[]});
-    const text=(g&&g.text)?g.text:fallback;
-    el.textContent=text; spokenText=text; history=(g&&g.text)?[{role:'assistant',content:text}]:[];
-    autoSpeak(text);
-  }catch{ el.textContent=fallback; spokenText=fallback; autoSpeak(fallback); }
-}
-
-async function send(text){
-  text=(text||'').trim(); if(!text||!item) return;
-  $('q').value='';
-  addMe(text); history.push({role:'user',content:text});
-  const row=addBotRow(); thinking(row);
-  try{
-    const r=await post('/api/chat',{label:item.class,bin:item.bin.type,confidence:item.confidence||0,lang:curLang(),messages:history});
-    if(r.error||!r.text) throw new Error(r.error||'no text');
-    fillBot(row,r.text); history.push({role:'assistant',content:r.text}); autoSpeak(r.text);
-  }catch(err){ fillBot(row,'Sorry, I could not answer that just now. Please try again.'); console.error(err); }
-}
-
-function addMe(t){ const d=document.createElement('div'); d.className='msg me'; d.textContent=t; $('thread').appendChild(d); see(); }
-function addBotRow(){ const r=document.createElement('div'); r.className='msg bot'; $('thread').appendChild(r); see(); return r; }
-function thinking(row){ row.innerHTML='<span class="thinking"><span class="dot"></span>Thinking…</span>'; see(); }
-function fillBot(row,text){ row.textContent=text; see(); }
-function see(){ $('thread').lastElementChild?.scrollIntoView({block:'nearest'}); }
-
-/* ---------- voice (automatic, no play buttons) ---------- */
-function autoSpeak(text){ if(voiceOn && text) speak(text); }
-async function speak(text){
-  if(!voiceOn) return;
-  try{
-    const r=await post('/api/tts',{text,language_code:curLang()});
-    if(r.error||!r.audio) return;
-    const p=$('player'); p.src=`data:${r.mime||'audio/mpeg'};base64,${r.audio}`;
-    $('speaking').classList.add('on');
-    p.onended=()=>$('speaking').classList.remove('on');
-    await p.play().catch(()=>$('speaking').classList.remove('on'));
-  }catch(err){ $('speaking').classList.remove('on'); console.error(err); }
-}
-
-function reset(){
-  stopStream(); $('player').pause(); $('speaking').classList.remove('on');
-  currentImage=null; item=null; history=[]; spokenText='';
-  $('preview').src=''; $('preview').hidden=true; $('video').hidden=true;
-  $('stage').hidden=true; $('stage').classList.remove('busy');
-  $('shutter').hidden=true; $('camhint').hidden=true; $('cancelCam').hidden=true;
-  $('result').hidden=true; $('thread').innerHTML=''; $('chips').innerHTML='';
-  $('intro').hidden=false; $('startRow').hidden=false; $('identify').hidden=true; $('again').hidden=true;
-  $('gal').value=''; setStatus('');
-  document.documentElement.style.setProperty('--accent', css('--recycle'));
-  document.documentElement.style.setProperty('--accent-t', css('--recycle-t'));
-}
-function setStatus(t){ $('status').textContent=t; }
-async function post(url,body){ const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return res.json(); }
 </script>
 </body>
 </html>
