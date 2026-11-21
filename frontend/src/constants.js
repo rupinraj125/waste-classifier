@@ -6,10 +6,45 @@ export const BIN_INFO = {
 }
 
 export const VOICES = [
-  { id: 'shubh',  name: 'Shubh',  gender: 'Male',   emoji: '👨', desc: 'Warm & clear' },
-  { id: 'aditya', name: 'Aditya', gender: 'Male',   emoji: '👦', desc: 'Young & energetic' },
-  { id: 'ishita', name: 'Ishita', gender: 'Female', emoji: '👩', desc: 'Friendly & bright' },
-  { id: 'priya',  name: 'Priya',  gender: 'Female', emoji: '👧', desc: 'Soft & expressive' },
+  // ── Male ──────────────────────────────────────────────────────
+  { id: 'shubh',    name: 'Shubh',    gender: 'Male',   tone: 'Warm & clear',       emoji: '👨' },
+  { id: 'aditya',   name: 'Aditya',   gender: 'Male',   tone: 'Young & energetic',  emoji: '👦' },
+  { id: 'advait',   name: 'Advait',   gender: 'Male',   tone: 'Deep & steady',      emoji: '🧑' },
+  { id: 'anand',    name: 'Anand',    gender: 'Male',   tone: 'Friendly & bright',  emoji: '😊' },
+  { id: 'rahul',    name: 'Rahul',    gender: 'Male',   tone: 'Casual & natural',   emoji: '🙂' },
+  { id: 'rohan',    name: 'Rohan',    gender: 'Male',   tone: 'Smooth & confident', emoji: '😎' },
+  { id: 'amit',     name: 'Amit',     gender: 'Male',   tone: 'Bold & clear',       emoji: '💪' },
+  { id: 'dev',      name: 'Dev',      gender: 'Male',   tone: 'Crisp & modern',     emoji: '⚡' },
+  { id: 'kabir',    name: 'Kabir',    gender: 'Male',   tone: 'Rich & warm',        emoji: '🎙️' },
+  { id: 'mani',     name: 'Mani',     gender: 'Male',   tone: 'Relaxed & friendly', emoji: '🌿' },
+  { id: 'gokul',    name: 'Gokul',    gender: 'Male',   tone: 'Cheerful & clear',   emoji: '☀️' },
+  { id: 'tarun',    name: 'Tarun',    gender: 'Male',   tone: 'Youthful & sharp',   emoji: '🔥' },
+  { id: 'sunny',    name: 'Sunny',    gender: 'Male',   tone: 'Bright & upbeat',    emoji: '🌞' },
+  { id: 'soham',    name: 'Soham',    gender: 'Male',   tone: 'Calm & measured',    emoji: '🧘' },
+  { id: 'rehan',    name: 'Rehan',    gender: 'Male',   tone: 'Smooth & expressive',emoji: '🎤' },
+  { id: 'mohit',    name: 'Mohit',    gender: 'Male',   tone: 'Strong & steady',    emoji: '🏋️' },
+  { id: 'varun',    name: 'Varun',    gender: 'Male',   tone: 'Easy-going & warm',  emoji: '🌊' },
+  { id: 'manan',    name: 'Manan',    gender: 'Male',   tone: 'Thoughtful & clear', emoji: '💭' },
+  { id: 'sumit',    name: 'Sumit',    gender: 'Male',   tone: 'Authoritative',      emoji: '📢' },
+  { id: 'aayan',    name: 'Aayan',    gender: 'Male',   tone: 'Lively & fresh',     emoji: '🌱' },
+  { id: 'ashutosh', name: 'Ashutosh', gender: 'Male',   tone: 'Professional & clear',emoji: '🎯' },
+  { id: 'ratan',    name: 'Ratan',    gender: 'Male',   tone: 'Mature & trustworthy',emoji: '🏅' },
+  { id: 'vijay',    name: 'Vijay',    gender: 'Male',   tone: 'Bold & confident',   emoji: '🏆' },
+  // ── Female ────────────────────────────────────────────────────
+  { id: 'ishita',   name: 'Ishita',   gender: 'Female', tone: 'Friendly & bright',  emoji: '👩' },
+  { id: 'priya',    name: 'Priya',    gender: 'Female', tone: 'Soft & expressive',  emoji: '👧' },
+  { id: 'neha',     name: 'Neha',     gender: 'Female', tone: 'Sweet & clear',      emoji: '🌸' },
+  { id: 'pooja',    name: 'Pooja',    gender: 'Female', tone: 'Warm & soothing',    emoji: '🌺' },
+  { id: 'simran',   name: 'Simran',   gender: 'Female', tone: 'Natural & calm',     emoji: '🌼' },
+  { id: 'kavya',    name: 'Kavya',    gender: 'Female', tone: 'Lively & cheerful',  emoji: '✨' },
+  { id: 'shreya',   name: 'Shreya',   gender: 'Female', tone: 'Clear & confident',  emoji: '💫' },
+  { id: 'roopa',    name: 'Roopa',    gender: 'Female', tone: 'Warm & motherly',    emoji: '🤗' },
+  { id: 'tanya',    name: 'Tanya',    gender: 'Female', tone: 'Crisp & modern',     emoji: '⚡' },
+  { id: 'shruti',   name: 'Shruti',   gender: 'Female', tone: 'Melodic & gentle',   emoji: '🎵' },
+  { id: 'suhani',   name: 'Suhani',   gender: 'Female', tone: 'Pleasant & smooth',  emoji: '🌙' },
+  { id: 'kavitha',  name: 'Kavitha',  gender: 'Female', tone: 'Deep & expressive',  emoji: '🎭' },
+  { id: 'rupali',   name: 'Rupali',   gender: 'Female', tone: 'Rich & warm',        emoji: '🌹' },
+  { id: 'ritu',     name: 'Ritu',     gender: 'Female', tone: 'Bright & upbeat',    emoji: '🌟' },
 ]
 
 export const LANGUAGES = [
@@ -26,44 +61,19 @@ export const LANGUAGES = [
   { code: 'od-IN', label: 'ଓଡ଼ିଆ',      short: 'OD' },
 ]
 
-// Voice preview sentences per language per voice — natural, topic-relevant
+// Voice preview sentences — SHORT (5-7 words) for instant playback
 export const VOICE_PREVIEWS = {
-  'en-IN': {
-    shubh:  'Please separate your dry and wet waste before putting them in the bin.',
-    aditya: 'Did you know recycling one plastic bottle saves enough energy to power a bulb for 3 hours?',
-    ishita: 'Sort your waste correctly and help keep our city clean and green.',
-    priya:  'Batteries and electronics need special drop-off points — never throw them in a regular bin.',
-  },
-  'hi-IN': {
-    shubh:  'कृपया सूखा और गीला कचरा अलग-अलग डिब्बों में डालें।',
-    aditya: 'क्या आप जानते हैं? एक प्लास्टिक बोतल को रिसाइकल करने से तीन घंटे बल्ब जल सकता है।',
-    ishita: 'सही तरीके से कचरा छाँटें और अपने शहर को स्वच्छ रखें।',
-    priya:  'बैटरी और इलेक्ट्रॉनिक्स को सामान्य कूड़ेदान में कभी न डालें।',
-  },
-  'ta-IN': {
-    shubh:  'உலர் மற்றும் ஈர குப்பைகளை தனித்தனியே பிரித்து போடுங்கள்.',
-    aditya: 'ஒரு பிளாஸ்டிக் பாட்டிலை மறுசுழற்சி செய்வது மூன்று மணி நேரம் பல்பை எரிய வைக்கும்.',
-    ishita: 'சரியாக குப்பை பிரிக்கவும், நமது நகரை சுத்தமாக வைக்கவும்.',
-    priya:  'பேட்டரிகளை சாதாரண குப்பை தொட்டியில் போடாதீர்கள்.',
-  },
-  'te-IN': {
-    shubh:  'పొడి మరియు తడి చెత్తను వేర్వేరు డబ్బాల్లో వేయండి.',
-    aditya: 'ఒక ప్లాస్టిక్ బాటిల్ రీసైకిల్ చేయడం వల్ల మూడు గంటలు బల్బు వెలగడం సాధ్యమవుతుంది.',
-    ishita: 'సరిగ్గా వ్యర్థాలు విడదీయండి మరియు మీ నగరాన్ని పరిశుభ్రంగా ఉంచండి.',
-    priya:  'బ్యాటరీలు సాధారణ చెత్తబుట్టలో వేయవద్దు.',
-  },
-  'kn-IN': {
-    shubh:  'ಒಣ ಮತ್ತು ಹಸಿ ತ್ಯಾಜ್ಯವನ್ನು ಬೇರ್ಪಡಿಸಿ ಹಾಕಿ.',
-    aditya: 'ಒಂದು ಪ್ಲಾಸ್ಟಿಕ್ ಬಾಟಲ್ ಮರುಬಳಕೆ ಮಾಡುವುದರಿಂದ ಮೂರು ಗಂಟೆ ಬಲ್ಬ್ ಉರಿಯಬಹುದು.',
-    ishita: 'ಸರಿಯಾಗಿ ತ್ಯಾಜ್ಯ ವಿಂಗಡಿಸಿ ನಮ್ಮ ನಗರವನ್ನು ಸ್ವಚ್ಛವಾಗಿ ಇಡಿ.',
-    priya:  'ಬ್ಯಾಟರಿಗಳನ್ನು ಸಾಮಾನ್ಯ ಕಸದ ಬುಟ್ಟಿಗೆ ಹಾಕಬೇಡಿ.',
-  },
-  'ml-IN': {
-    shubh:  'ഉണങ്ങിയ, നനഞ്ഞ മാലിന്യങ്ങൾ വേർതിരിച്ച് ഇടുക.',
-    aditya: 'ഒരു പ്ലാസ്റ്റിക് ബോട്ടിൽ റീസൈക്കിൾ ചെയ്‌താൽ മൂന്ന് മണിക്കൂർ ബൾബ് കത്തിക്കാം.',
-    ishita: 'ശരിയായ രീതിയിൽ മാലിന്യം തരംതിരിച്ച് നഗരം വൃത്തിയാക്കൂ.',
-    priya:  'ബാറ്ററികൾ ഒരിക്കലും സാധാരണ ചവറ്റുകുട്ടയിൽ ഇടരുത്.',
-  },
+  'en-IN': 'Sort your waste. Save the planet.',
+  'hi-IN': 'Kachra sahi jagah dalo. Planet bachao.',
+  'ta-IN': 'Waste-a correct-a sort pannunga. Planet save pannalaam.',
+  'te-IN': 'Chettanu sari chotu veyyandi. Bhumi kapadandi.',
+  'kn-IN': 'Thayajannu sariyagi vaargisi. Bhoomiya ulisiri.',
+  'ml-IN': 'Malinyannu swarissi vekku. Bhumi kaakkuka.',
+  'mr-IN': 'Kachra yogya thikani taka. Prithvi wachva.',
+  'gu-IN': 'Kachro saachi jagye nakho. Pruthvi bachavo.',
+  'bn-IN': 'Baajey ta thikthane phelo. Prithivi bachao.',
+  'pa-IN': 'Kuuda sahi jagah pao. Dharti bachao.',
+  'od-IN': 'Aababadha sathikara jagare rakha. Prithvi bachao.',
 }
 
 export const TTS_SPEEDS = [
