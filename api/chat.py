@@ -2,16 +2,14 @@
 POST /api/chat — Groq primary, Gemini fallback.
 
 Mode 1 — type="analyze"
-  Returns JSON with ALL strings in the chosen language/style.
-  - If not waste (human, food still being eaten, furniture in use): tell them kindly
-    to retake or explains why it doesn't belong in a waste bin.
-  - Tamil → Tanglish (Tamil + English mix, natural spoken style)
-  - Hindi → Hinglish (Hindi + English mix, natural spoken style)
-  - English → Clear, friendly, natural spoken British-Indian English
-  - Other Indian languages → natural spoken style, not formal/literary
+  Returns JSON with ALL strings in the chosen language.
+  - Pure native language for every output (no mixing, no Tanglish, no Hinglish)
+  - Conversational and warm — like a helpful friend, NOT a textbook
+  - Non-waste / human: kindly redirect, 0 steps
+  - Variable steps: 2 for simple items, 3 for moderate, 4 for hazardous only
 
 Mode 2 — type="chat"
-  Conversational follow-up. Same language/style rules apply.
+  Conversational follow-up in pure native language.
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, urllib.request, urllib.error
@@ -25,66 +23,81 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL",     "gemini-3.5-flash-lite")
 
 UA = "WasteSorterApp/2.0"
 
-# Language → style instruction for the LLM
+# Pure native language instructions — no code-mixing
 LANG_STYLE = {
     "en-IN": (
         "English",
-        "Write in clear, warm, natural British-Indian English. "
-        "Like a knowledgeable friend texting you — casual, direct, no jargon. "
-        "Use contractions (it's, don't, you'll). Never use passive voice or formal phrasing."
+        "Write in clear, warm, conversational Indian English. "
+        "Like a knowledgeable friend — casual, direct, helpful. "
+        "Use contractions (it's, don't, you'll). Short sentences. "
+        "No jargon, no passive voice, no textbook language."
     ),
     "hi-IN": (
         "Hindi",
-        "Hinglish mein likho — yani Hindi aur English ka natural mix, "
-        "jaise hum WhatsApp pe baat karte hain. "
-        "Example: 'Yeh plastic bottle hai, isse recycle bin mein daalo. Cap on rakhna theek hai!' "
-        "Formal/literary Hindi bilkul mat use karo. Aam bolchal ki bhasha use karo."
+        "शुद्ध हिंदी में लिखें — सरल, बोलचाल की भाषा में। "
+        "जैसे कोई जानकार दोस्त सीधे बात कर रहा हो। "
+        "छोटे वाक्य रखें। औपचारिक या साहित्यिक हिंदी न लिखें।"
     ),
     "ta-IN": (
         "Tamil",
-        "Tanglish use panunga — Tamil aur English mix, natural-a pesuvadhu mathiri. "
-        "Example: 'Ithu plastic bottle, recycle bin-la podunga. Cap remove pannanum nu nenaikkaadheega!' "
-        "Formal Tamil use pannaadheenga. Normal-a pesuvathu mathiri ezhudhunga."
+        "தமிழில் எழுதுங்கள் — எளிய, இயற்கையான பேச்சு வழக்கில். "
+        "ஒரு அறிவுள்ள நண்பர் நேரடியாக பேசுவது போல் எழுதுங்கள். "
+        "குறுகிய வாக்கியங்கள் பயன்படுத்துங்கள். "
+        "ஆங்கில வார்த்தைகள் கலக்காதீர்கள். இலக்கண நடை வேண்டாம்."
     ),
     "te-IN": (
         "Telugu",
-        "Natural spoken Telugu use cheyyandi — formal/literary Telugu avoid cheyyandi. "
-        "Friendly ga, direct ga, ee item gurinchi mee friend cheppinatu cheyyandi."
+        "తెలుగులో రాయండి — సులభమైన, సహజమైన మాట్లాడే శైలిలో. "
+        "ఒక నమ్మకమైన స్నేహితుడు నేరుగా చెప్పినట్లు రాయండి. "
+        "చిన్న వాక్యాలు వాడండి. ఆంగ్ల మాటలు కలపవద్దు. "
+        "పుస్తక భాష వాడవద్దు."
     ),
     "kn-IN": (
         "Kannada",
-        "Natural spoken Kannada use maadi — formal/literary Kannada avoid maadi. "
-        "Friendly aagi, direct aagi, nimage friend heluvante heliri."
+        "ಕನ್ನಡದಲ್ಲಿ ಬರೆಯಿರಿ — ಸರಳ, ನೈಸರ್ಗಿಕ ಮಾತನಾಡುವ ಶೈಲಿಯಲ್ಲಿ. "
+        "ಒಬ್ಬ ಬುದ್ಧಿವಂತ ಸ್ನೇಹಿತ ನೇರವಾಗಿ ಹೇಳಿದಂತೆ ಬರೆಯಿರಿ. "
+        "ಚಿಕ್ಕ ವಾಕ್ಯಗಳನ್ನು ಬಳಸಿ. ಇಂಗ್ಲಿಷ್ ಮಿಶ್ರ ಮಾಡಬೇಡಿ. "
+        "ಸಾಹಿತ್ಯಿಕ ಭಾಷೆ ಬಳಸಬೇಡಿ."
     ),
     "ml-IN": (
         "Malayalam",
-        "Natural spoken Malayalam use cheyyuka — formal/literary Malayalam avoid cheyyuka. "
-        "Friendly ayi, direct ayi, ninakku oru kootukaran parayunna pole ezhuthuka."
+        "മലയാളത്തിൽ എഴുതുക — ലളിതമായ, സ്വാഭാവിക സംഭാഷണ ഭാഷയിൽ. "
+        "ഒരു അറിവുള്ള സുഹൃത്ത് നേരിട്ട് പറയുന്ന പോലെ. "
+        "ചെറിയ വാക്യങ്ങൾ ഉപയോഗിക്കുക. "
+        "ഇംഗ്ലീഷ് കലർത്തരുത്. ഗ്രന്ഥഭാഷ ഉപയോഗിക്കരുത്."
     ),
     "mr-IN": (
         "Marathi",
-        "Natural spoken Marathi use kara — formal/literary Marathi avoid kara. "
-        "Mitra sarkhe bolnyasarkhe lihaa, direct ani friendly."
+        "मराठीत लिहा — सोप्या, बोलीभाषेत. "
+        "एखाद्या जाणकार मित्राप्रमाणे थेट बोलल्यासारखे लिहा. "
+        "छोटी वाक्ये वापरा. इंग्रजी शब्द मिसळू नका. "
+        "औपचारिक किंवा साहित्यिक मराठी वापरू नका."
     ),
     "gu-IN": (
         "Gujarati",
-        "Natural spoken Gujarati use karo — formal/literary Gujarati avoid karo. "
-        "Mitra ne kahi ne jeva bolava jevo likho, direct ane friendly."
+        "ગુજરાતીમાં લખો — સરળ, બોલચાલની ભાષામાં. "
+        "એક જ્ઞાની મિત્ર સીધી વાત કરે તે રીતે. "
+        "નાના વાક્યો વાપરો. અંગ્રેજી ભળવ ન ​​કરો. "
+        "ઔપચારિક ભાષા ન વાપરો."
     ),
     "bn-IN": (
         "Bengali",
-        "Natural spoken Bengali use koro — formal/literary Bengali avoid koro. "
-        "Bondhur moto bolte bolte likho, direct ebong friendly."
+        "বাংলায় লিখুন — সহজ, কথ্য ভাষায়। "
+        "একজন জ্ঞানী বন্ধু যেভাবে সরাসরি বলে সেভাবে লিখুন। "
+        "ছোট বাক্য ব্যবহার করুন। ইংরেজি মেশাবেন না। "
+        "আনুষ্ঠানিক বা সাহিত্যিক ভাষা ব্যবহার করবেন না।"
     ),
     "pa-IN": (
         "Punjabi",
-        "Natural spoken Punjabi use karo — formal/literary Punjabi avoid karo. "
-        "Yaar naal gallan karda hova likhna, direct te friendly."
+        "ਪੰਜਾਬੀ ਵਿੱਚ ਲਿਖੋ — ਸਰਲ, ਬੋਲਚਾਲ ਦੀ ਭਾਸ਼ਾ ਵਿੱਚ। "
+        "ਜਿਵੇਂ ਕੋਈ ਜਾਣਕਾਰ ਦੋਸਤ ਸਿੱਧਾ ਗੱਲ ਕਰਦਾ ਹੋਵੇ। "
+        "ਛੋਟੇ ਵਾਕ ਵਰਤੋ। ਅੰਗਰੇਜ਼ੀ ਨਾ ਮਿਲਾਓ।"
     ),
     "od-IN": (
         "Odia",
-        "Natural spoken Odia use kara — formal/literary Odia avoid kara. "
-        "Bondhu sathire kathaa kahibaa pare lekha, direct ebam friendly."
+        "ଓଡ଼ିଆରେ ଲେଖନ୍ତୁ — ସରଳ, ବୋଲିଭାଷାରେ। "
+        "ଜଣେ ଜ୍ଞାନୀ ବନ୍ଧୁ ସିଧା କଥା କହୁଥିବା ଭଳି ଲେଖନ୍ତୁ। "
+        "ଛୋଟ ବାକ୍ୟ ବ୍ୟବହାର କରନ୍ତୁ। ଇଂରାଜୀ ମିଶ୍ରଣ କରନ୍ତୁ ନାହିଁ।"
     ),
 }
 
@@ -92,57 +105,55 @@ LANG_STYLE = {
 def _sys_analyze(label, category, bin_type, conf, lang_code, is_waste):
     lang_name, style_note = LANG_STYLE.get(lang_code, LANG_STYLE["en-IN"])
 
-    # Non-waste or human: different response
     if not is_waste or category in ("person", "human", "animal", "food_active"):
         non_waste_note = (
-            f"IMPORTANT: This item ('{label}') is NOT waste or is NOT something that belongs in a bin. "
-            f"Tell the user warmly that this doesn't look like waste — maybe they scanned the wrong thing, "
-            f"or the camera picked up something unexpected. Ask them to retake the photo with just the waste item. "
-            f"Keep is_waste as false. Give 0 steps (empty array). "
-            f"Make image_desc describe what you think was actually scanned."
+            f"IMPORTANT: '{label}' does not appear to be a waste item. "
+            "Tell the user warmly that this doesn't look like something to dispose of — "
+            "ask them to retake the photo showing only the waste item they want to sort. "
+            "Set is_waste to false. Give ZERO steps (empty array []). "
+            "Make image_desc describe what was actually seen in a friendly way."
         )
     else:
         non_waste_note = ""
 
-    # Decide how many steps based on item complexity
     step_guidance = (
-        "Give ONLY 2 steps if disposal is simple (e.g. paper, cardboard, food waste). "
-        "Give 3 steps for moderate items (plastic, glass, clothes). "
-        "Give 4 steps ONLY for complex/hazardous items (batteries, electronics, e-waste). "
-        "Do NOT pad with obvious filler steps."
+        "Steps count rule — follow strictly:\n"
+        "- 2 steps: simple items (paper, cardboard, food scraps, vegetable waste)\n"
+        "- 3 steps: moderate items (plastic bottles, glass, clothes, shoes, metal)\n"
+        "- 4 steps: hazardous/complex items ONLY (batteries, electronics, e-waste)\n"
+        "Do NOT add obvious filler steps. Every step must be a real, specific action."
     )
 
     return (
-        f"You are a real person — a helpful, slightly witty neighbour in India who actually knows "
-        f"their waste sorting. {non_waste_note}\n\n"
+        f"You are a helpful, friendly waste-sorting expert for Indian households. {non_waste_note}\n"
         f"The user photographed: '{label}' (category: '{category}', bin: '{bin_type}', confidence: {conf:.0%}).\n\n"
-        f"LANGUAGE & STYLE: {style_note}\n\n"
-        f"VOICE TONE: Write as if this will be READ ALOUD by a voice assistant. "
-        f"Short sentences. Natural pauses (use commas). "
-        f"Emotional where appropriate — reassuring for hazardous, matter-of-fact for simple items, "
-        f"slightly urgent for batteries/electronics. "
-        f"NO bullet points, NO bold/italic, NO markdown. JUST natural spoken language.\n\n"
+        f"LANGUAGE: {style_note}\n\n"
+        "VOICE TONE: This text will be read aloud by a voice assistant. So:\n"
+        "- Write short, natural sentences with commas for breathing pauses\n"
+        "- Be emotionally appropriate: warm/reassuring for hazardous items, "
+        "matter-of-fact for simple ones, slightly serious for batteries/electronics\n"
+        "- No bullet points, no markdown, no bold text — only plain spoken sentences\n\n"
         f"{step_guidance}\n\n"
-        "Reply ONLY as a valid JSON object — no markdown, no code fences:\n"
-        '{"image_desc":"One warm, natural sentence describing what this item is — like you are seeing it",'
+        "Reply ONLY as a valid JSON object — no markdown fences:\n"
+        '{"image_desc":"One warm natural sentence describing this exact item",'
         '"is_waste":true,'
-        '"waste_verdict":"One sentence: exactly which bin and why — make it stick in memory",'
-        '"steps":["step one text","step two text"],'
-        '"hazard_note":"One urgent, specific warning if hazardous — JSON null if safe",'
-        '"quick_tip":"One memorable line under 12 words that they will actually remember"}\n\n'
-        f"ALL text must be in the {lang_name} style described above. "
-        f"Steps must address the most common MISTAKE people make with this specific item."
+        '"waste_verdict":"One sentence: exactly which bin and the most important reason",'
+        '"steps":["step one","step two"],'
+        '"hazard_note":"One specific urgent warning if hazardous — JSON null if safe",'
+        '"quick_tip":"One memorable line under 12 words they will actually use"}\n\n'
+        f"ALL output must be in {lang_name}. "
+        "Steps must fix the most common mistake people make with this exact item."
     )
 
 
 def _sys_chat(label, category, bin_type, conf, lang_code):
     lang_name, style_note = LANG_STYLE.get(lang_code, LANG_STYLE["en-IN"])
     return (
-        f"You are a helpful neighbour answering a waste-sorting question about a '{label}' "
-        f"(category: '{category}', bin: '{bin_type}').\n"
-        f"Answer like you're replying to a WhatsApp message — short, direct, friendly, honest.\n"
-        f"LANGUAGE & STYLE: {style_note}\n"
-        f"Keep it to 2 sentences MAX. No lists, no markdown."
+        f"You are a friendly waste-sorting helper for Indian households.\n"
+        f"Context: the user has '{label}' (category: '{category}', bin: '{bin_type}').\n"
+        f"Answer their question directly and helpfully in 2 sentences max.\n"
+        f"LANGUAGE: {style_note}\n"
+        "No lists, no markdown, no filler."
     )
 
 
@@ -174,8 +185,8 @@ def _gemini(sys_text, messages, max_tokens=900, temp=0.4):
     contents = [{"role": _r(m["role"]), "parts": [{"text": m["content"]}]} for m in messages]
     body = {
         "system_instruction": {"parts": [{"text": sys_text}]},
-        "contents": contents,
-        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temp},
+        "contents":           contents,
+        "generationConfig":   {"maxOutputTokens": max_tokens, "temperature": temp},
     }
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}")
@@ -215,9 +226,9 @@ def do_analyze(label, category, bin_type, conf, lang, is_waste):
 
 
 def do_chat(label, category, bin_type, conf, lang, messages):
-    sys_text  = _sys_chat(label, category, bin_type, conf, lang)
-    history   = [m for m in messages
-                 if m.get("role") in ("user", "assistant") and m.get("content")]
+    sys_text   = _sys_chat(label, category, bin_type, conf, lang)
+    history    = [m for m in messages
+                  if m.get("role") in ("user", "assistant") and m.get("content")]
     if not history:
         history = [{"role": "user", "content": "Quick summary please."}]
     text, prov = _llm(sys_text, history[-8:], max_tokens=350, temp=0.5)

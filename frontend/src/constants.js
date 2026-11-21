@@ -61,19 +61,20 @@ export const LANGUAGES = [
   { code: 'od-IN', label: 'ଓଡ଼ିଆ',      short: 'OD' },
 ]
 
-// Voice preview sentences — SHORT (5-7 words) for instant playback
+// Voice preview phrases — unique per language, native script, 6-10 words
+// Different sentence for each language so the preview sounds natural
 export const VOICE_PREVIEWS = {
-  'en-IN': 'Sort your waste. Save the planet.',
-  'hi-IN': 'Kachra sahi jagah dalo. Planet bachao.',
-  'ta-IN': 'Waste-a correct-a sort pannunga. Planet save pannalaam.',
-  'te-IN': 'Chettanu sari chotu veyyandi. Bhumi kapadandi.',
-  'kn-IN': 'Thayajannu sariyagi vaargisi. Bhoomiya ulisiri.',
-  'ml-IN': 'Malinyannu swarissi vekku. Bhumi kaakkuka.',
-  'mr-IN': 'Kachra yogya thikani taka. Prithvi wachva.',
-  'gu-IN': 'Kachro saachi jagye nakho. Pruthvi bachavo.',
-  'bn-IN': 'Baajey ta thikthane phelo. Prithivi bachao.',
-  'pa-IN': 'Kuuda sahi jagah pao. Dharti bachao.',
-  'od-IN': 'Aababadha sathikara jagare rakha. Prithvi bachao.',
+  'en-IN': "Separate your dry and wet waste before putting them in the bin.",
+  'hi-IN': "कचरे को सही तरीके से अलग करें और पर्यावरण बचाएं।",
+  'ta-IN': "உங்கள் குப்பையை சரியாக பிரித்து சுற்றுச்சூழலை காப்போம்.",
+  'te-IN': "మీ వ్యర్థాలను సరిగ్గా వేరు చేసి పర్యావరణాన్ని కాపాడండి.",
+  'kn-IN': "ನಿಮ್ಮ ತ್ಯಾಜ್ಯವನ್ನು ಸರಿಯಾಗಿ ಬೇರ್ಪಡಿಸಿ ಪರಿಸರ ಉಳಿಸಿ.",
+  'ml-IN': "നിങ്ങളുടെ മാലിന്യം ശരിയായി വേർതിരിച്ച് പരിസ്ഥിതി സംരക്ഷിക്കൂ.",
+  'mr-IN': "कचरा योग्य पद्धतीने वेगळा करा आणि पर्यावरण वाचवा.",
+  'gu-IN': "કચરો યોગ્ય રીતે અલગ કરો અને પર્યાવરણ બચાવો.",
+  'bn-IN': "আপনার বর্জ্য সঠিকভাবে আলাদা করুন এবং পরিবেশ রক্ষা করুন।",
+  'pa-IN': "ਆਪਣਾ ਕੂੜਾ ਸਹੀ ਤਰੀਕੇ ਨਾਲ ਵੱਖ ਕਰੋ ਅਤੇ ਵਾਤਾਵਰਣ ਬਚਾਓ।",
+  'od-IN': "ଆପଣଙ୍କ ଆବର୍ଜନାକୁ ସଠିକ ଭାବରେ ଅଲଗା କରନ୍ତୁ।",
 }
 
 export const TTS_SPEEDS = [

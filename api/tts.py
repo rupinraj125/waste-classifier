@@ -1,48 +1,40 @@
 """
 POST /api/tts
-body: {
-  "text":          "...",
-  "language_code": "hi-IN",
-  "speaker":       "ishita",
-  "full":          false,
-  "pace":          1.0
-}
+body: { "text", "language_code", "speaker", "full", "pace" }
 
-Uses Sarvam bulbul:v3 — the best Indic TTS model.
-Speaker defaults are chosen per language for the most natural emotion.
-Pace defaults are tuned per language (Indian languages need slightly slower pace).
-Full text limit: 2400 chars. Fast path: first sentence only (~220 chars).
+Uses Sarvam bulbul:v3. Pitch and pace are tuned per language for natural emotion.
+bulbul:v3 accepts pitch in range -1.0 to 1.0 (0.0 = neutral).
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, re, urllib.request, urllib.error
 
 KEY   = os.environ.get("SARVAM_API_KEY", "").strip()
 URL   = "https://api.sarvam.ai/text-to-speech"
-MODEL = "bulbul:v3"   # always use v3 — best quality for all Indian languages
+MODEL = "bulbul:v3"
 
-# Best speaker per language for natural emotion
-# Male voices: shubh, aditya, rahul, rohan
-# Female voices: ishita, priya, neha, pooja
+# Tuned per language: speaker, pace, pitch
+# pitch:  >0 = higher/brighter,  <0 = deeper/warmer
+# pace:   >1.0 = faster,          <1.0 = slower
 LANG_DEFAULTS = {
-    "en-IN": {"speaker": "ishita", "pace": 1.08},   # English — slightly fast, clear
-    "hi-IN": {"speaker": "advait", "pace": 0.95},   # Hindi — a bit slower, warm
-    "ta-IN": {"speaker": "ishita", "pace": 0.92},   # Tamil — slower for Tanglish clarity
-    "te-IN": {"speaker": "advait", "pace": 0.93},   # Telugu
-    "kn-IN": {"speaker": "advait", "pace": 0.93},   # Kannada
-    "ml-IN": {"speaker": "advait", "pace": 0.90},   # Malayalam — slowest, melodic
-    "mr-IN": {"speaker": "advait", "pace": 0.95},   # Marathi
-    "gu-IN": {"speaker": "advait", "pace": 0.95},   # Gujarati
-    "bn-IN": {"speaker": "advait", "pace": 0.93},   # Bengali
-    "pa-IN": {"speaker": "advait", "pace": 0.97},   # Punjabi
-    "od-IN": {"speaker": "advait", "pace": 0.92},   # Odia
+    "en-IN": {"speaker": "ishita",  "pace": 1.08, "pitch":  0.1},   # crisp, clear
+    "hi-IN": {"speaker": "advait",  "pace": 0.95, "pitch": -0.1},   # warm, steady
+    "ta-IN": {"speaker": "ishita",  "pace": 0.90, "pitch":  0.0},   # natural Tamil
+    "te-IN": {"speaker": "advait",  "pace": 0.92, "pitch": -0.05},  # Telugu rhythm
+    "kn-IN": {"speaker": "advait",  "pace": 0.92, "pitch": -0.05},  # Kannada rhythm
+    "ml-IN": {"speaker": "advait",  "pace": 0.88, "pitch": -0.15},  # Malayalam — melodic, deeper
+    "mr-IN": {"speaker": "advait",  "pace": 0.95, "pitch":  0.0},   # Marathi
+    "gu-IN": {"speaker": "advait",  "pace": 0.95, "pitch":  0.05},  # Gujarati — slightly brighter
+    "bn-IN": {"speaker": "advait",  "pace": 0.92, "pitch": -0.05},  # Bengali
+    "pa-IN": {"speaker": "advait",  "pace": 0.97, "pitch":  0.0},   # Punjabi
+    "od-IN": {"speaker": "advait",  "pace": 0.90, "pitch": -0.05},  # Odia
 }
 
-FAST_LIMIT = 240   # slightly larger for Indian languages with longer words
+FAST_LIMIT = 240
+
 
 def _trim(text: str, full: bool) -> str:
     if full:
         return text[:2400]
-    # Split on sentence-ending punctuation
     parts = re.split(r'(?<=[.!?।\u0964])\s+', text.strip())
     out   = ""
     for p in parts:
@@ -56,14 +48,15 @@ def _trim(text: str, full: bool) -> str:
     return out or text[:FAST_LIMIT]
 
 
-def synthesize(text: str, lang: str, speaker: str, pace: float) -> str:
+def synthesize(text: str, lang: str, speaker: str, pace: float, pitch: float) -> str:
     payload = json.dumps({
         "text":               text,
         "language_code":      lang,
         "model":              MODEL,
         "speaker":            speaker,
         "output_audio_codec": "mp3",
-        "pace":               round(max(0.6, min(1.5, pace)), 2),
+        "pace":               round(max(0.6, min(1.5,  pace)),  2),
+        "pitch":              round(max(-1.0, min(1.0, pitch)), 2),
     }, ensure_ascii=False).encode()
 
     req = urllib.request.Request(
@@ -97,21 +90,20 @@ class handler(BaseHTTPRequestHandler):
             if not raw_text:
                 return self._send(400, {"error": "No text provided."})
 
-            lang    = d.get("language_code", "en-IN")
+            lang     = d.get("language_code", "en-IN")
             defaults = LANG_DEFAULTS.get(lang, LANG_DEFAULTS["en-IN"])
 
-            # Speaker: request body → env var → language default
             speaker = (
                 d.get("speaker")
                 or os.environ.get("SARVAM_SPEAKER", "")
                 or defaults["speaker"]
             ).strip()
 
-            # Pace: request body → language default
-            pace = float(d.get("pace") or defaults["pace"])
+            pace  = float(d.get("pace")  or defaults["pace"])
+            pitch = float(d.get("pitch") or defaults["pitch"])
 
             text  = _trim(raw_text, bool(d.get("full")))
-            audio = synthesize(text, lang, speaker, pace)
+            audio = synthesize(text, lang, speaker, pace, pitch)
             self._send(200, {"audio": audio, "mime": "audio/mpeg"})
 
         except urllib.error.HTTPError as e:
