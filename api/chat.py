@@ -1,97 +1,83 @@
 """
-POST /api/chat
-Two modes:
+POST /api/chat  — 100% Groq (qwen/qwen3.8-27b), Gemini as fallback only.
 
-1. type="analyze"  (default on first call)
-   body: { "label":"plastic", "bin":"recycle", "confidence":0.95, "lang":"en-IN" }
-   Returns structured JSON analysis card:
-   {
-     "type": "analyze",
-     "image_desc": "...",
-     "is_waste": true,
-     "waste_verdict": "...",
-     "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ...", "Step 4: ..."],
-     "hazard_note": "..." | null,
-     "quick_tip": "...",
-     "provider": "groq" | "gemini"
-   }
+Mode 1 — type="analyze"
+  body: { type, label, category, bin, confidence, lang, is_waste }
+  Returns structured JSON — ALL strings in the chosen language:
+  { type, image_desc, is_waste, waste_verdict, steps[4], hazard_note, quick_tip, provider }
 
-2. type="chat"
-   body: { "label":"plastic", "bin":"recycle", "confidence":0.95,
-           "lang":"en-IN", "messages":[...] }
-   Returns: { "type":"chat", "text":"...", "lang":"en-IN", "provider":"..." }
+Mode 2 — type="chat"
+  body: { type, label, category, bin, confidence, lang, messages[] }
+  Returns: { type, text, lang, provider }
 
-Provider priority (based on live testing):
-  1. Groq  qwen/qwen3.8-27b  — primary  (~0.5s, perfect JSON, stable)
-  2. Gemini gemini-3.5-flash-lite — secondary  (slower, good quality)
+LANGUAGE: every string in the response is written in the requested language
+so Sarvam TTS reads it correctly.
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, urllib.request, urllib.error
 
-# ── Groq (PRIMARY) ─────────────────────────────────────────────────────────
-GROQ_KEY   = os.environ.get("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
+GROQ_KEY   = os.environ.get("GROQ_API_KEY",   "").strip()
+GROQ_MODEL = os.environ.get("GROQ_MODEL",     "qwen/qwen3.8-27b")
 GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
 
-# ── Gemini (SECONDARY) ─────────────────────────────────────────────────────
-GEMINI_KEY   = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
-# URL built at request time (key embedded in query string)
+GEMINI_KEY   = os.environ.get("GEMINI_API_KEY",   "").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL",     "gemini-3.5-flash-lite")
+
+UA = "WasteSorterApp/2.0"
 
 LANGS = {
-    "en-IN": "English", "hi-IN": "Hindi",   "ta-IN": "Tamil",   "te-IN": "Telugu",
-    "kn-IN": "Kannada", "ml-IN": "Malayalam","mr-IN": "Marathi",
-    "gu-IN": "Gujarati","bn-IN": "Bengali",  "pa-IN": "Punjabi", "od-IN": "Odia",
+    "en-IN": "English",    "hi-IN": "Hindi",     "ta-IN": "Tamil",
+    "te-IN": "Telugu",     "kn-IN": "Kannada",   "ml-IN": "Malayalam",
+    "mr-IN": "Marathi",    "gu-IN": "Gujarati",  "bn-IN": "Bengali",
+    "pa-IN": "Punjabi",    "od-IN": "Odia",
 }
 
-UA = "WasteSorterApp/2.0"   # prevents Cloudflare blocks
 
-
-# ── Prompts ────────────────────────────────────────────────────────────────
-
-def _analyze_sys(label, bin_type, confidence, lang_name):
+def _sys_analyze(label, category, bin_type, conf, lang_name, is_waste):
+    extra = "" if is_waste else " Note: this item may not be typical waste."
     return (
-        f"You are a waste-disposal expert assistant for Indian households.\n"
-        f"The user photographed an item. Vision model: '{label}', bin: '{bin_type}', "
-        f"confidence {confidence:.0%}. Language for all string values: {lang_name}.\n\n"
-        f"Reply ONLY as a valid JSON object — no markdown, no code fences, no extra text:\n"
-        '{"image_desc":"1-sentence description of what this item looks like",'
-        '"is_waste":true,'
-        '"waste_verdict":"1-sentence verdict on the waste category",'
-        '"steps":["Step 1: ...","Step 2: ...","Step 3: ...","Step 4: ..."],'
-        '"hazard_note":"1-sentence hazard warning if hazardous, otherwise use JSON null",'
-        '"quick_tip":"memorable tip under 12 words"}'
-    )
-
-def _chat_sys(label, bin_type, confidence, lang_name):
-    return (
-        f"You are a friendly waste-sorting assistant for Indian households. "
-        f"Item: '{label}', bin: '{bin_type}', confidence {confidence:.0%}. "
-        f"Answer disposal questions helpfully. "
-        f"Reply ONLY in {lang_name}. Keep replies to 2-3 sentences, plain, no markdown."
+        f"You are a waste-disposal expert for Indian households.{extra}\n"
+        f"The user photographed: '{label}' (waste category: '{category}', "
+        f"bin: '{bin_type}', confidence: {conf:.0%}).\n\n"
+        f"CRITICAL: Write EVERY string value in {lang_name} only.\n\n"
+        "Reply ONLY as a valid JSON object — no markdown, no code fences:\n"
+        "{\"image_desc\":\"1 sentence: describe this specific item\","
+        "\"is_waste\":true,"
+        "\"waste_verdict\":\"1 sentence: waste type and correct bin\","
+        "\"steps\":[\"step 1\",\"step 2\",\"step 3\",\"step 4\"],"
+        "\"hazard_note\":\"1 sentence safety warning, or JSON null if safe\","
+        "\"quick_tip\":\"one memorable tip under 12 words\"}\n\n"
+        f"Steps must be practical for India. All text in {lang_name}."
     )
 
 
-# ── HTTP helper ────────────────────────────────────────────────────────────
+def _sys_chat(label, category, bin_type, conf, lang_name):
+    return (
+        f"You are a helpful waste-sorting assistant for Indian households.\n"
+        f"Context: the user has '{label}' (category: '{category}', "
+        f"bin: '{bin_type}', confidence: {conf:.0%}).\n"
+        f"Answer the user's disposal or recycling question.\n"
+        f"CRITICAL: Reply ONLY in {lang_name}. "
+        "2–3 sentences maximum. Plain text, no markdown."
+    )
 
-def _post(url, body, headers):
-    data = json.dumps(body, ensure_ascii=False).encode()
+
+def _post(url, body_dict, extra_hdrs):
+    data = json.dumps(body_dict, ensure_ascii=False).encode()
     req  = urllib.request.Request(
         url, data=data,
-        headers={"Content-Type": "application/json", "User-Agent": UA, **headers},
+        headers={"Content-Type": "application/json", "User-Agent": UA, **extra_hdrs},
     )
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read())
 
 
-# ── Groq call ──────────────────────────────────────────────────────────────
-
-def _groq(sys_text, messages, max_tokens=800, temperature=0.3, json_mode=False):
+def _groq(sys_text, messages, max_tokens=900, temp=0.3, json_mode=False):
     body = {
-        "model": GROQ_MODEL,
-        "messages": [{"role": "system", "content": sys_text}] + messages,
-        "max_tokens": max_tokens,
-        "temperature": temperature,
+        "model":       GROQ_MODEL,
+        "messages":    [{"role": "system", "content": sys_text}] + messages,
+        "max_tokens":  max_tokens,
+        "temperature": temp,
     }
     if json_mode:
         body["response_format"] = {"type": "json_object"}
@@ -99,88 +85,62 @@ def _groq(sys_text, messages, max_tokens=800, temperature=0.3, json_mode=False):
     return out["choices"][0]["message"]["content"].strip()
 
 
-# ── Gemini call ────────────────────────────────────────────────────────────
-
-def _gemini(sys_text, messages, max_tokens=800, temperature=0.3):
-    def _role(r):
-        return "model" if r == "assistant" else r
-    contents = [{"role": _role(m["role"]), "parts": [{"text": m["content"]}]}
-                for m in messages]
+def _gemini(sys_text, messages, max_tokens=900, temp=0.3):
+    def _r(r): return "model" if r == "assistant" else r
+    contents = [{"role": _r(m["role"]), "parts": [{"text": m["content"]}]} for m in messages]
     body = {
         "system_instruction": {"parts": [{"text": sys_text}]},
         "contents": contents,
-        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
+        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temp},
     }
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}"
-    )
+    url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+           f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}")
     out  = _post(url, body, {})
     text = out["candidates"][0]["content"]["parts"][0]["text"].strip()
-    # Strip any accidental markdown fences
     if text.startswith("```"):
         lines = text.split("\n")
         text  = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:]).strip()
     return text
 
 
-# ── Provider dispatcher ────────────────────────────────────────────────────
-
-def _llm(sys_text, messages, max_tokens=800, temperature=0.3, json_mode=False):
-    """Try Groq → Gemini. Returns (text, provider_name)."""
-    errors = []
-
+def _llm(sys_text, messages, max_tokens=900, temp=0.3, json_mode=False):
     if GROQ_KEY:
         try:
-            return _groq(sys_text, messages, max_tokens, temperature, json_mode), "groq"
-        except Exception as e:
-            errors.append(f"groq: {e}")
-
+            return _groq(sys_text, messages, max_tokens, temp, json_mode), "groq"
+        except Exception:
+            pass
     if GEMINI_KEY:
         try:
-            return _gemini(sys_text, messages, max_tokens, temperature), "gemini"
-        except Exception as e:
-            errors.append(f"gemini: {e}")
+            return _gemini(sys_text, messages, max_tokens, temp), "gemini"
+        except Exception:
+            pass
+    raise RuntimeError("No LLM available.")
 
-    raise RuntimeError("; ".join(errors) or "No LLM API keys configured.")
 
-
-# ── Analyze mode ───────────────────────────────────────────────────────────
-
-def do_analyze(label, bin_type, confidence, lang):
+def do_analyze(label, category, bin_type, conf, lang, is_waste):
     lang_name = LANGS.get(lang, "English")
-    sys_text  = _analyze_sys(label, bin_type, confidence, lang_name)
-    user_msgs = [{"role": "user", "content": "Analyze this waste item now."}]
-
-    # Try with json_mode on (Groq supports it; Gemini ignores the flag gracefully)
-    raw, provider = _llm(sys_text, user_msgs, max_tokens=800, temperature=0.3, json_mode=True)
-    parsed = json.loads(raw)   # propagate JSONDecodeError to caller
-
-    # Sanitise: ensure steps is exactly a list of 4
+    sys_text  = _sys_analyze(label, category, bin_type, conf, lang_name, is_waste)
+    msgs      = [{"role": "user", "content": f"Analyze the '{label}' item now."}]
+    raw, prov = _llm(sys_text, msgs, max_tokens=900, temp=0.3, json_mode=True)
+    parsed    = json.loads(raw)
     steps = parsed.get("steps")
-    if not isinstance(steps, list):
-        steps = []
-    parsed["steps"] = steps[:4]
-
+    if not isinstance(steps, list): steps = []
+    parsed["steps"]    = steps[:4]
     parsed["type"]     = "analyze"
-    parsed["provider"] = provider
+    parsed["provider"] = prov
     return parsed
 
 
-# ── Chat mode ──────────────────────────────────────────────────────────────
-
-def do_chat(label, bin_type, confidence, lang, messages):
+def do_chat(label, category, bin_type, conf, lang, messages):
     lang_name = LANGS.get(lang, "English")
-    sys_text  = _chat_sys(label, bin_type, confidence, lang_name)
+    sys_text  = _sys_chat(label, category, bin_type, conf, lang_name)
     history   = [m for m in messages
                  if m.get("role") in ("user", "assistant") and m.get("content")]
     if not history:
-        history = [{"role": "user", "content": "Give me a quick summary for disposal."}]
-    text, provider = _llm(sys_text, history[-8:], max_tokens=300, temperature=0.5)
-    return {"type": "chat", "text": text, "lang": lang, "provider": provider}
+        history = [{"role": "user", "content": "Give me a brief disposal summary."}]
+    text, prov = _llm(sys_text, history[-8:], max_tokens=350, temp=0.5)
+    return {"type": "chat", "text": text, "lang": lang, "provider": prov}
 
-
-# ── Handler ────────────────────────────────────────────────────────────────
 
 class handler(BaseHTTPRequestHandler):
     def _send(self, code, obj):
@@ -195,32 +155,25 @@ class handler(BaseHTTPRequestHandler):
         try:
             n = int(self.headers.get("content-length", 0))
             d = json.loads(self.rfile.read(n) or b"{}")
-            label = d.get("label") or d.get("class")
-            if not label:
-                return self._send(400, {"error": "No label provided."})
+            label    = d.get("label") or d.get("class") or "unknown item"
+            category = d.get("category") or label
+            bin_type = d.get("bin", "landfill")
+            conf     = float(d.get("confidence", 0))
+            lang     = d.get("lang", "en-IN")
+            is_waste = d.get("is_waste", True)
+
             if not GROQ_KEY and not GEMINI_KEY:
                 return self._send(503, {"error": "No LLM API keys set.", "disabled": True})
 
-            lang     = d.get("lang", "en-IN")
-            req_type = d.get("type", "analyze")
-
-            if req_type == "chat":
-                result = do_chat(
-                    label, d.get("bin", "general"),
-                    float(d.get("confidence", 0)),
-                    lang, d.get("messages", []))
+            if d.get("type") == "chat":
+                result = do_chat(label, category, bin_type, conf, lang,
+                                 d.get("messages", []))
             else:
                 try:
-                    result = do_analyze(
-                        label, d.get("bin", "general"),
-                        float(d.get("confidence", 0)), lang)
+                    result = do_analyze(label, category, bin_type, conf, lang, is_waste)
                 except (json.JSONDecodeError, KeyError):
-                    # JSON parse failed — degrade gracefully to plain chat
-                    result = do_chat(
-                        label, d.get("bin", "general"),
-                        float(d.get("confidence", 0)), lang, [])
+                    result = do_chat(label, category, bin_type, conf, lang, [])
                     result["type"] = "analyze_fallback"
-
             self._send(200, result)
         except urllib.error.HTTPError as e:
             self._send(502, {"error": f"API error {e.code}: {e.read().decode()[:200]}"})

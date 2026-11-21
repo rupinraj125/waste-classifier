@@ -1,123 +1,159 @@
 """
 POST /api/classify   body: {"image": "<dataURL or base64 jpeg/png>"}
 
-Two identifiers:
-  * Groq vision (qwen/qwen3.6-27b) — stronger on real-world photos
-  * your EfficientNetV2-S via ONNX Runtime — fast, local, free
+Pipeline (100% Groq, no Gemini dependency):
+  1. Groq vision  (qwen/qwen3.8-27b, ~0.5 s)
+       → identifies the REAL item in the image
+       → returns item_name, waste_category, is_waste, confidence
+       Fixes the core bug: ONNX only knows 11 classes and misclassifies
+       laptops as "paper", headphones as "shoes", etc.
 
-CLASSIFIER_PRIMARY = "vision" (default) -> Qwen identifies; your model is the
-    fallback when Qwen errors / is unavailable, and always supplies the top-3.
-CLASSIFIER_PRIMARY = "model"            -> your model identifies; Qwen is only
-    consulted when the model's confidence is below FALLBACK_THRESHOLD.
-Set FALLBACK_OFF=1 to never call Qwen. GROQ_VISION_MODEL to change the vision model.
+  2. Local ONNX   (EfficientNetV2-S, CPU, ~50 ms)
+       → always runs for the top-3 confidence bars shown in the UI
+       → its label is NOT the primary result when Groq vision is available
+
+  3. If GROQ_API_KEY is unset, falls back to ONNX-only.
 """
 from http.server import BaseHTTPRequestHandler
-import json, os, io, base64, urllib.request
+import json, os, io, base64, urllib.request, urllib.error
 import numpy as np
 from PIL import Image
 import onnxruntime as ort
 
 _DIR   = os.path.dirname(__file__)
-_MODEL = os.path.join(_DIR, "_model", "waste_classifier.onnx")
 _META  = os.path.join(_DIR, "_model", "model_meta.json")
+_MODEL = os.path.join(_DIR, "_model", "waste_classifier.onnx")
 
 with open(_META, encoding="utf-8") as f:
     META = json.load(f)
-SESS  = ort.InferenceSession(_MODEL, providers=["CPUExecutionProvider"])
-IN    = SESS.get_inputs()[0].name
-S     = int(META["img_size"])
-MEAN  = np.array(META["mean"], dtype=np.float32)
-STD   = np.array(META["std"],  dtype=np.float32)
-CLASSES = META["classes"]
 
-GROQ_KEY     = os.environ.get("GROQ_API_KEY")
-VISION_MODEL = os.environ.get("GROQ_VISION_MODEL", "qwen/qwen3.6-27b")
-PRIMARY      = os.environ.get("CLASSIFIER_PRIMARY", "vision").lower()  # "vision" | "model"
-THRESHOLD    = float(os.environ.get("FALLBACK_THRESHOLD", "0.55"))
-FALLBACK_OFF = os.environ.get("FALLBACK_OFF") == "1"
-GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions"
+SESS    = ort.InferenceSession(_MODEL, providers=["CPUExecutionProvider"])
+IN_NAME = SESS.get_inputs()[0].name
+S       = int(META["img_size"])
+MEAN    = np.array(META["mean"], dtype=np.float32)
+STD     = np.array(META["std"],  dtype=np.float32)
+CLASSES = META["classes"]   # 11 ONNX classes
+
+GROQ_KEY    = os.environ.get("GROQ_API_KEY", "").strip()
+GROQ_URL    = "https://api.groq.com/openai/v1/chat/completions"
+VISION_MODEL = os.environ.get("GROQ_VISION_MODEL", "qwen/qwen3.8-27b")
+UA           = "WasteSorterApp/2.0"
+
+# Bin info for categories beyond the 11 ONNX classes
+EXTRA_BINS = {
+    "electronics": {"bin": "hazardous", "color": "red",   "emoji": "⚠️",  "hazardous": True},
+    "e-waste":     {"bin": "hazardous", "color": "red",   "emoji": "⚠️",  "hazardous": True},
+    "food":        {"bin": "compost",   "color": "brown", "emoji": "🟤", "hazardous": False},
+    "textile":     {"bin": "landfill",  "color": "black", "emoji": "🗑️", "hazardous": False},
+    "furniture":   {"bin": "landfill",  "color": "black", "emoji": "🗑️", "hazardous": False},
+    "other":       {"bin": "landfill",  "color": "black", "emoji": "🗑️", "hazardous": False},
+}
+ALL_BINS = {**META["bin_info"], **EXTRA_BINS}
+
+VISION_PROMPT = (
+    "You are a waste classification expert. "
+    "Look at the image carefully and identify the EXACT item shown.\n\n"
+    "Reply ONLY as a valid JSON object — no markdown, no extra text:\n"
+    "{\"item_name\":\"exact name of what you see, e.g. laptop, headphones, plastic bottle, banana peel\","
+    "\"waste_category\":\"one of: plastic, glass, metal, cardboard, paper, biological, battery, "
+    "electronics, clothes, shoes, vegetation, food, textile, furniture, trash, other\","
+    "\"is_waste\":true,"
+    "\"confidence\":0.9}\n\n"
+    "Rules:\n"
+    "- item_name must be the SPECIFIC item, not a generic waste type.\n"
+    "- Laptops, phones, tablets, headphones, cables, chargers, TVs → electronics\n"
+    "- AA/AAA/button batteries → battery\n"
+    "- Food scraps → biological\n"
+    "- is_waste is false only if the item is clearly not disposable (e.g. a person).\n"
+    "- confidence: 0.0–1.0 based on how clearly you can see the item."
+)
 
 
-def preprocess(img):
-    img = img.convert("RGB").resize((S, S), Image.BILINEAR)
-    x = (np.asarray(img, dtype=np.float32) / 255.0 - MEAN) / STD
-    return np.transpose(x, (2, 0, 1))[None, :].astype(np.float32)
+def _run_onnx(raw_b64: str):
+    """Returns top3 list. Never raises."""
+    try:
+        img  = Image.open(io.BytesIO(base64.b64decode(raw_b64))).convert("RGB").resize((S, S), Image.BILINEAR)
+        x    = (np.asarray(img, dtype=np.float32) / 255.0 - MEAN) / STD
+        x    = np.transpose(x, (2, 0, 1))[None, :].astype(np.float32)
+        logits = SESS.run(None, {IN_NAME: x})[0][0]
+        e    = np.exp(logits - logits.max()); probs = e / e.sum()
+        order = probs.argsort()[::-1]
+        return [{"class": CLASSES[int(i)], "confidence": round(float(probs[i]), 4)}
+                for i in order[:3]]
+    except Exception:
+        return []
 
 
-def run_model(data_url):
-    b64 = data_url.split(",", 1)[1] if "," in data_url else data_url
-    img = Image.open(io.BytesIO(base64.b64decode(b64)))
-    logits = SESS.run(None, {IN: preprocess(img)})[0][0]
-    e = np.exp(logits - logits.max()); probs = e / e.sum()
-    return probs
-
-
-def groq_vision(data_url):
-    prompt = ("You are a waste-sorting classifier. Look at the image and choose the single best "
-              "category from EXACTLY this list: " + ", ".join(CLASSES) + ". "
-              "Reply with only that one word in lowercase, nothing else.")
-    payload = json.dumps({
-        "model": VISION_MODEL, "max_tokens": 10, "temperature": 0,
+def _groq_vision(data_url: str) -> dict:
+    """Calls Groq multimodal. Returns parsed dict. Raises on failure."""
+    body = json.dumps({
+        "model":    VISION_MODEL,
+        "max_tokens": 150,
+        "temperature": 0,
+        "response_format": {"type": "json_object"},
         "messages": [{"role": "user", "content": [
-            {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": data_url}},
+            {"type": "text",      "text": VISION_PROMPT},
         ]}],
-    }).encode()
-    req = urllib.request.Request(GROQ_URL, data=payload,
-        headers={"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=25) as r:
+    }, ensure_ascii=False).encode()
+
+    req = urllib.request.Request(
+        GROQ_URL, data=body,
+        headers={"Authorization": f"Bearer {GROQ_KEY}",
+                 "Content-Type": "application/json", "User-Agent": UA},
+    )
+    with urllib.request.urlopen(req, timeout=20) as r:
         out = json.loads(r.read())
-    word = out["choices"][0]["message"]["content"].strip().lower()
-    for c in CLASSES:
-        if c == word or c in word:
-            return c
-    return None
+    return json.loads(out["choices"][0]["message"]["content"].strip())
 
 
-def result_for(cls, confidence, probs, source, agree=None, model_guess=None):
-    order = probs.argsort()[::-1]
-    b = META["bin_info"][cls]
-    out = {
-        "class": cls,
-        "confidence": (None if confidence is None else round(float(confidence), 4)),
-        "bin": {"type": b["bin"], "color": b["color"], "emoji": b["emoji"]},
-        "hazardous": bool(b["hazardous"]),
+def classify(data_url: str) -> dict:
+    raw_b64 = data_url.split(",", 1)[1] if "," in data_url else data_url
+    top3    = _run_onnx(raw_b64)   # always run for UI confidence bars
+
+    if GROQ_KEY:
+        try:
+            v        = _groq_vision(data_url)
+            item     = str(v.get("item_name",      "unknown item")).strip()
+            cat      = str(v.get("waste_category", "other")).lower().strip()
+            is_waste = bool(v.get("is_waste", True))
+            conf     = float(v.get("confidence", 0.85))
+            bin_info = ALL_BINS.get(cat, EXTRA_BINS["other"])
+            return {
+                "class":      item,
+                "category":   cat,
+                "confidence": round(conf, 4),
+                "bin":        {"type":  bin_info["bin"],
+                               "color": bin_info["color"],
+                               "emoji": bin_info["emoji"]},
+                "hazardous":  bool(bin_info["hazardous"]),
+                "recyclable": bin_info["bin"] == "recycle",
+                "is_waste":   is_waste,
+                "source":     "groq_vision",
+                "top3":       top3,
+            }
+        except Exception:
+            pass   # fall through to ONNX
+
+    # ONNX fallback
+    if top3:
+        tc = top3[0]["class"]; cf = top3[0]["confidence"]
+    else:
+        tc = "trash"; cf = 0.5
+    b = META["bin_info"][tc]
+    return {
+        "class":      tc,
+        "category":   tc,
+        "confidence": cf,
+        "bin":        {"type": b["bin"], "color": b["color"], "emoji": b["emoji"]},
+        "hazardous":  bool(b["hazardous"]),
         "recyclable": b["bin"] == "recycle",
-        "instructions": META["instructions"][cls],
-        "common_mistake": META["common_mistakes"][cls],
-        "source": source,                 # "ai_vision" | "model"
-        "top3": [{"class": CLASSES[int(i)], "confidence": round(float(probs[i]), 4)} for i in order[:3]],
+        "is_waste":   True,
+        "source":     "onnx",
+        "top3":       top3,
+        "instructions":   META["instructions"].get(tc, ""),
+        "common_mistake": META["common_mistakes"].get(tc, ""),
     }
-    if agree is not None: out["agree"] = agree
-    if model_guess is not None: out["model_guess"] = model_guess
-    return out
-
-
-def classify(data_url):
-    probs = run_model(data_url)                 # always run local model (cheap -> gives top-3)
-    model_top = CLASSES[int(probs.argmax())]
-    model_conf = float(probs.max())
-    use_vision = GROQ_KEY and not FALLBACK_OFF
-
-    if PRIMARY == "vision" and use_vision:
-        try:
-            v = groq_vision(data_url)
-            if v:
-                return result_for(v, None, probs, "ai_vision",
-                                  agree=(v == model_top), model_guess=model_top)
-        except Exception:
-            pass
-        return result_for(model_top, model_conf, probs, "model")   # Qwen unavailable -> your model
-
-    # PRIMARY == "model": your model leads; Qwen only double-checks weak guesses
-    if use_vision and model_conf < THRESHOLD:
-        try:
-            v = groq_vision(data_url)
-            if v and v != model_top:
-                return result_for(v, None, probs, "ai_vision", agree=False, model_guess=model_top)
-        except Exception:
-            pass
-    return result_for(model_top, model_conf, probs, "model")
 
 
 class handler(BaseHTTPRequestHandler):
@@ -131,10 +167,13 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            n = int(self.headers.get("content-length", 0))
+            n    = int(self.headers.get("content-length", 0))
             data = json.loads(self.rfile.read(n) or b"{}")
             if not data.get("image"):
                 return self._send(400, {"error": "No image provided."})
             self._send(200, classify(data["image"]))
         except Exception as e:
             self._send(500, {"error": f"Classification failed: {e}"})
+
+    def log_message(self, *_):
+        pass
