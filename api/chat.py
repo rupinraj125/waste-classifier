@@ -1,154 +1,167 @@
 """
 POST /api/chat
-Two modes determined by the "type" field in the body:
+Two modes:
 
-1. type="analyze" (default when messages is empty / not passed)
-   body: { "label":"plastic", "bin":"recycle", "confidence":0.95,
-           "lang":"en-IN", "image_desc":"" }
-   Returns a structured JSON analysis:
+1. type="analyze"  (default on first call)
+   body: { "label":"plastic", "bin":"recycle", "confidence":0.95, "lang":"en-IN" }
+   Returns structured JSON analysis card:
    {
      "type": "analyze",
-     "image_desc": "A crumpled plastic water bottle",
+     "image_desc": "...",
      "is_waste": true,
-     "waste_verdict": "Yes, this is household waste that can be recycled.",
-     "steps": ["Step 1: ...", "Step 2: ...", ...],
-     "hazard_note": "..." or null,
-     "quick_tip": "one sentence tip",
-     "provider": "gemini"|"groq"
+     "waste_verdict": "...",
+     "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ...", "Step 4: ..."],
+     "hazard_note": "..." | null,
+     "quick_tip": "...",
+     "provider": "groq" | "gemini"
    }
 
 2. type="chat"
    body: { "label":"plastic", "bin":"recycle", "confidence":0.95,
            "lang":"en-IN", "messages":[...] }
-   Returns: { "type":"chat", "text":"...", "lang":"en-IN", "provider":"gemini"|"groq" }
+   Returns: { "type":"chat", "text":"...", "lang":"en-IN", "provider":"..." }
 
-Provider priority: Gemini (primary) -> Groq (secondary) -> built-in fallback
+Provider priority (based on live testing):
+  1. Groq  qwen/qwen3.8-27b  — primary  (~0.5s, perfect JSON, stable)
+  2. Gemini gemini-3.5-flash-lite — secondary  (slower, good quality)
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, urllib.request, urllib.error
 
-GEMINI_KEY   = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-GEMINI_URL   = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}"
-)
-
+# ── Groq (PRIMARY) ─────────────────────────────────────────────────────────
 GROQ_KEY   = os.environ.get("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
 GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
 
+# ── Gemini (SECONDARY) ─────────────────────────────────────────────────────
+GEMINI_KEY   = os.environ.get("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+# URL built at request time (key embedded in query string)
+
 LANGS = {
-    "en-IN": "English", "hi-IN": "Hindi", "ta-IN": "Tamil",  "te-IN": "Telugu",
-    "kn-IN": "Kannada", "ml-IN": "Malayalam", "mr-IN": "Marathi",
-    "gu-IN": "Gujarati", "bn-IN": "Bengali",  "pa-IN": "Punjabi", "od-IN": "Odia",
+    "en-IN": "English", "hi-IN": "Hindi",   "ta-IN": "Tamil",   "te-IN": "Telugu",
+    "kn-IN": "Kannada", "ml-IN": "Malayalam","mr-IN": "Marathi",
+    "gu-IN": "Gujarati","bn-IN": "Bengali",  "pa-IN": "Punjabi", "od-IN": "Odia",
 }
+
+UA = "WasteSorterApp/2.0"   # prevents Cloudflare blocks
 
 
 # ── Prompts ────────────────────────────────────────────────────────────────
 
-def analyze_prompt(label, bin_type, confidence, lang_name):
-    return f"""You are a waste-disposal expert assistant for Indian households.
-The user photographed an item. The vision model identified it as '{label}' (bin: '{bin_type}', confidence {confidence:.0%}).
+def _analyze_sys(label, bin_type, confidence, lang_name):
+    return (
+        f"You are a waste-disposal expert assistant for Indian households.\n"
+        f"The user photographed an item. Vision model: '{label}', bin: '{bin_type}', "
+        f"confidence {confidence:.0%}. Language for all string values: {lang_name}.\n\n"
+        f"Reply ONLY as a valid JSON object — no markdown, no code fences, no extra text:\n"
+        '{"image_desc":"1-sentence description of what this item looks like",'
+        '"is_waste":true,'
+        '"waste_verdict":"1-sentence verdict on the waste category",'
+        '"steps":["Step 1: ...","Step 2: ...","Step 3: ...","Step 4: ..."],'
+        '"hazard_note":"1-sentence hazard warning if hazardous, otherwise use JSON null",'
+        '"quick_tip":"memorable tip under 12 words"}'
+    )
 
-Your job:
-1. Write a 1-sentence plain-English description of what this item likely is (image_desc).
-2. State whether this is household waste (is_waste: true/false).
-3. Write a 1-sentence verdict on what category of waste it is (waste_verdict).
-4. List exactly 4 numbered disposal/recycling steps, each one sentence, practical for India (steps array).
-5. If hazardous, write a 1-sentence warning (hazard_note), else null.
-6. Write one quick memorable tip under 12 words (quick_tip).
-
-Reply ONLY as valid JSON in {lang_name} (all string values in {lang_name}), exactly this shape:
-{{
-  "image_desc": "...",
-  "is_waste": true,
-  "waste_verdict": "...",
-  "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ...", "Step 4: ..."],
-  "hazard_note": "..." or null,
-  "quick_tip": "..."
-}}
-No extra text, no markdown fences, just the JSON object."""
-
-
-def chat_system_prompt(label, bin_type, confidence, lang_name):
+def _chat_sys(label, bin_type, confidence, lang_name):
     return (
         f"You are a friendly waste-sorting assistant for Indian households. "
         f"Item: '{label}', bin: '{bin_type}', confidence {confidence:.0%}. "
-        f"Answer questions about disposal, recycling, reuse, hazards, and local Indian practice. "
-        f"Reply ONLY in {lang_name}. Keep replies to 2-3 sentences, warm and plain. "
-        "No markdown, no bullets, no emojis."
+        f"Answer disposal questions helpfully. "
+        f"Reply ONLY in {lang_name}. Keep replies to 2-3 sentences, plain, no markdown."
     )
+
+
+# ── HTTP helper ────────────────────────────────────────────────────────────
+
+def _post(url, body, headers):
+    data = json.dumps(body, ensure_ascii=False).encode()
+    req  = urllib.request.Request(
+        url, data=data,
+        headers={"Content-Type": "application/json", "User-Agent": UA, **headers},
+    )
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())
+
+
+# ── Groq call ──────────────────────────────────────────────────────────────
+
+def _groq(sys_text, messages, max_tokens=800, temperature=0.3, json_mode=False):
+    body = {
+        "model": GROQ_MODEL,
+        "messages": [{"role": "system", "content": sys_text}] + messages,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+    }
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+    out = _post(GROQ_URL, body, {"Authorization": f"Bearer {GROQ_KEY}"})
+    return out["choices"][0]["message"]["content"].strip()
 
 
 # ── Gemini call ────────────────────────────────────────────────────────────
 
-def _gemini(system_text, user_messages, max_tokens=600, temperature=0.4):
+def _gemini(sys_text, messages, max_tokens=800, temperature=0.3):
     def _role(r):
         return "model" if r == "assistant" else r
-    contents = [{"role": _role(m["role"]), "parts": [{"text": m["content"]}]} for m in user_messages]
-    payload = json.dumps({
-        "system_instruction": {"parts": [{"text": system_text}]},
+    contents = [{"role": _role(m["role"]), "parts": [{"text": m["content"]}]}
+                for m in messages]
+    body = {
+        "system_instruction": {"parts": [{"text": sys_text}]},
         "contents": contents,
         "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
-    }).encode()
-    req = urllib.request.Request(
-        GEMINI_URL, data=payload, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=25) as r:
-        out = json.loads(r.read())
-    return out["candidates"][0]["content"]["parts"][0]["text"].strip()
+    }
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}"
+    )
+    out  = _post(url, body, {})
+    text = out["candidates"][0]["content"]["parts"][0]["text"].strip()
+    # Strip any accidental markdown fences
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text  = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:]).strip()
+    return text
 
 
-# ── Groq call ─────────────────────────────────────────────────────────────
+# ── Provider dispatcher ────────────────────────────────────────────────────
 
-def _groq(system_text, user_messages, max_tokens=600, temperature=0.4):
-    convo = [{"role": "system", "content": system_text}] + user_messages
-    payload = json.dumps({
-        "model": GROQ_MODEL, "messages": convo,
-        "max_tokens": max_tokens, "temperature": temperature,
-    }).encode()
-    req = urllib.request.Request(
-        GROQ_URL, data=payload,
-        headers={"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=25) as r:
-        out = json.loads(r.read())
-    return out["choices"][0]["message"]["content"].strip()
+def _llm(sys_text, messages, max_tokens=800, temperature=0.3, json_mode=False):
+    """Try Groq → Gemini. Returns (text, provider_name)."""
+    errors = []
 
-
-# ── Dispatcher ─────────────────────────────────────────────────────────────
-
-def llm(system_text, user_messages, max_tokens=600, temperature=0.4):
-    """Returns (text, provider_name) trying Gemini then Groq."""
-    if GEMINI_KEY:
-        try:
-            return _gemini(system_text, user_messages, max_tokens, temperature), "gemini"
-        except Exception:
-            pass
     if GROQ_KEY:
         try:
-            return _groq(system_text, user_messages, max_tokens, temperature), "groq"
-        except Exception:
-            pass
-    raise RuntimeError("No LLM available.")
+            return _groq(sys_text, messages, max_tokens, temperature, json_mode), "groq"
+        except Exception as e:
+            errors.append(f"groq: {e}")
+
+    if GEMINI_KEY:
+        try:
+            return _gemini(sys_text, messages, max_tokens, temperature), "gemini"
+        except Exception as e:
+            errors.append(f"gemini: {e}")
+
+    raise RuntimeError("; ".join(errors) or "No LLM API keys configured.")
 
 
 # ── Analyze mode ───────────────────────────────────────────────────────────
 
 def do_analyze(label, bin_type, confidence, lang):
     lang_name = LANGS.get(lang, "English")
-    sys_text  = analyze_prompt(label, bin_type, confidence, lang_name)
+    sys_text  = _analyze_sys(label, bin_type, confidence, lang_name)
     user_msgs = [{"role": "user", "content": "Analyze this waste item now."}]
-    raw, provider = llm(sys_text, user_msgs, max_tokens=700, temperature=0.3)
 
-    # Strip any accidental markdown fences
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
+    # Try with json_mode on (Groq supports it; Gemini ignores the flag gracefully)
+    raw, provider = _llm(sys_text, user_msgs, max_tokens=800, temperature=0.3, json_mode=True)
+    parsed = json.loads(raw)   # propagate JSONDecodeError to caller
 
-    parsed = json.loads(raw)   # propagate parse error up so caller can handle
+    # Sanitise: ensure steps is exactly a list of 4
+    steps = parsed.get("steps")
+    if not isinstance(steps, list):
+        steps = []
+    parsed["steps"] = steps[:4]
+
     parsed["type"]     = "analyze"
     parsed["provider"] = provider
     return parsed
@@ -158,11 +171,12 @@ def do_analyze(label, bin_type, confidence, lang):
 
 def do_chat(label, bin_type, confidence, lang, messages):
     lang_name = LANGS.get(lang, "English")
-    sys_text  = chat_system_prompt(label, bin_type, confidence, lang_name)
-    history   = [m for m in messages if m.get("role") in ("user", "assistant") and m.get("content")]
+    sys_text  = _chat_sys(label, bin_type, confidence, lang_name)
+    history   = [m for m in messages
+                 if m.get("role") in ("user", "assistant") and m.get("content")]
     if not history:
         history = [{"role": "user", "content": "Give me a quick summary for disposal."}]
-    text, provider = llm(sys_text, history[-8:], max_tokens=300, temperature=0.5)
+    text, provider = _llm(sys_text, history[-8:], max_tokens=300, temperature=0.5)
     return {"type": "chat", "text": text, "lang": lang, "provider": provider}
 
 
@@ -184,23 +198,27 @@ class handler(BaseHTTPRequestHandler):
             label = d.get("label") or d.get("class")
             if not label:
                 return self._send(400, {"error": "No label provided."})
-            if not GEMINI_KEY and not GROQ_KEY:
+            if not GROQ_KEY and not GEMINI_KEY:
                 return self._send(503, {"error": "No LLM API keys set.", "disabled": True})
-            lang = d.get("lang", "en-IN")
+
+            lang     = d.get("lang", "en-IN")
             req_type = d.get("type", "analyze")
 
             if req_type == "chat":
-                result = do_chat(label, d.get("bin", "general"),
-                                 float(d.get("confidence", 0)),
-                                 lang, d.get("messages", []))
+                result = do_chat(
+                    label, d.get("bin", "general"),
+                    float(d.get("confidence", 0)),
+                    lang, d.get("messages", []))
             else:
                 try:
-                    result = do_analyze(label, d.get("bin", "general"),
-                                        float(d.get("confidence", 0)), lang)
+                    result = do_analyze(
+                        label, d.get("bin", "general"),
+                        float(d.get("confidence", 0)), lang)
                 except (json.JSONDecodeError, KeyError):
-                    # JSON parse failed — fall back to chat-style summary
-                    result = do_chat(label, d.get("bin", "general"),
-                                     float(d.get("confidence", 0)), lang, [])
+                    # JSON parse failed — degrade gracefully to plain chat
+                    result = do_chat(
+                        label, d.get("bin", "general"),
+                        float(d.get("confidence", 0)), lang, [])
                     result["type"] = "analyze_fallback"
 
             self._send(200, result)
