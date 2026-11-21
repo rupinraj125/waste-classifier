@@ -47,7 +47,7 @@ def check_sarvam():
         payload = json.dumps({
             "text": "test",
             "language_code": "en-IN",
-            "model": "bulbul:v4",
+            "model": "bulbul:v3",
             "speaker": "shubh",
         }).encode()
         req = urllib.request.Request(
@@ -63,7 +63,7 @@ def check_sarvam():
             return {
                 "status": "active",
                 "plan": "Pay-as-you-go",
-                "model": "bulbul:v4",
+                "model": "bulbul:v3",
                 "note": "Check dashboard.sarvam.ai for credits",
             }
     except urllib.error.HTTPError as e:
