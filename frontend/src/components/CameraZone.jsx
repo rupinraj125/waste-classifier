@@ -10,182 +10,207 @@ export default function CameraZone({ img64, clsData, phase, onFile }) {
 
   return (
     <>
-      <div
-        style={{
+      {/* Idle — fixed aspect ratio box */}
+      {!img64 && (
+        <div
+          onClick={() => inputRef.current?.click()}
+          style={{
+            margin: '4px 16px 0',
+            borderRadius: 24,
+            background: 'var(--s1)',
+            aspectRatio: '4/5',
+            position: 'relative',
+            border: '1.5px dashed var(--ln2)',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 14,
+            padding: 24,
+            textAlign: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          <motion.div
+            animate={{ scale: [1, 1.04, 1] }}
+            transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+            style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: 'var(--s3)', border: '1.5px solid var(--ln2)',
+              display: 'grid', placeItems: 'center',
+              boxShadow: '0 0 32px var(--acs)',
+            }}
+          >
+            <Camera size={30} color="var(--ac)" />
+          </motion.div>
+          <p style={{ color: 'var(--tx3)', fontSize: 13.5, maxWidth: '22ch', lineHeight: 1.5 }}>
+            Snap or upload any item — we'll tell you exactly where it goes
+          </p>
+          <small style={{ color: 'var(--tx3)', fontSize: 11, opacity: .6 }}>Tap anywhere to open camera</small>
+        </div>
+      )}
+
+      {/* Loaded — photo with result strip BELOW (no clipping, natural height) */}
+      {img64 && (
+        <div style={{
           margin: '4px 16px 0',
           borderRadius: 24,
           overflow: 'hidden',
-          background: 'var(--s1)',
-          aspectRatio: img64 ? '4/5' : '4/5',
-          position: 'relative',
-          border: `1.5px ${img64 ? 'solid' : 'dashed'} var(--ln2)`,
-          cursor: img64 ? 'default' : 'pointer',
-          transition: 'border-color .25s',
-        }}
-        onClick={() => !img64 && inputRef.current?.click()}
-      >
-        {/* Idle state */}
-        <AnimatePresence>
-          {!img64 && (
-            <motion.div
-              key="idle"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                gap: 14, padding: 24, textAlign: 'center',
-              }}
-            >
+          border: `1.5px solid ${binInfo ? binInfo.color + '88' : 'var(--ln2)'}`,
+          background: '#000',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          {/* Photo — fixed 16:11 so it doesn't eat all screen */}
+          <div style={{ position: 'relative', aspectRatio: '16/11', overflow: 'hidden', background: '#000' }}>
+            <img
+              src={img64}
+              alt="Uploaded item"
+              style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+            />
+
+            {/* Classifying spinner */}
+            <AnimatePresence>
+              {phase === 'classifying' && (
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    background: 'rgba(0,0,0,.5)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 12,
+                    backdropFilter: 'blur(3px)',
+                  }}
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                    style={{
+                      width: 44, height: 44, borderRadius: '50%',
+                      border: '3px solid rgba(255,255,255,.12)',
+                      borderTopColor: 'var(--ac)',
+                    }}
+                  />
+                  <span style={{ color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 500 }}>
+                    Identifying…
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Top-3 confidence bar — overlaid at bottom of photo */}
+            <AnimatePresence>
+              {hasResult && clsData?.top3?.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    background: 'rgba(0,0,0,.7)',
+                    backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                    padding: '8px 14px 10px',
+                    display: 'flex', gap: 10,
+                  }}
+                >
+                  {clsData.top3.map((t, i) => (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: 'capitalize', opacity: .85, color: '#fff' }}>
+                        {t.class}
+                      </div>
+                      <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,.15)', borderRadius: 999, overflow: 'hidden' }}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.round(t.confidence * 100)}%` }}
+                          transition={{ delay: .2 + i * .08, duration: .6, ease: 'easeOut' }}
+                          style={{ height: '100%', background: '#fff', borderRadius: 999 }}
+                        />
+                      </div>
+                      <div style={{ fontSize: 9, opacity: .6, color: '#fff' }}>{Math.round(t.confidence * 100)}%</div>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Result strip — BELOW the photo, never overlapping */}
+          <AnimatePresence>
+            {hasResult && binInfo && (
               <motion.div
-                animate={{ scale: [1, 1.04, 1] }}
-                transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', damping: 22, stiffness: 280, delay: .05 }}
                 style={{
-                  width: 72, height: 72, borderRadius: '50%',
-                  background: 'var(--s3)', border: '1.5px solid var(--ln2)',
-                  display: 'grid', placeItems: 'center',
-                  boxShadow: '0 0 32px var(--acs)',
+                  background: `linear-gradient(135deg, ${binInfo.color}f0, ${binInfo.color}b0)`,
+                  padding: '14px 16px 14px',
+                  display: 'flex', alignItems: 'flex-start', gap: 14,
                 }}
               >
-                <Camera size={30} color="var(--ac)" />
-              </motion.div>
-              <p style={{ color: 'var(--tx3)', fontSize: 13.5, maxWidth: '22ch', lineHeight: 1.5 }}>
-                Snap or upload any item — we'll tell you exactly where it goes
-              </p>
-              <small style={{ color: 'var(--tx3)', fontSize: 11, opacity: .6 }}>Tap anywhere to open camera</small>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <motion.div
+                  initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: .15, type: 'spring', damping: 14 }}
+                  style={{ fontSize: 44, lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 3px 10px rgba(0,0,0,.35))' }}
+                >
+                  {clsData.bin.emoji}
+                </motion.div>
 
-        {/* Photo + result */}
-        <AnimatePresence>
-          {img64 && (
-            <motion.div
-              key="photo"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}
-            >
-              {/* Photo */}
-              <div style={{ flex: 1, overflow: 'hidden', position: 'relative', background: '#000' }}>
-                <img
-                  src={img64}
-                  alt="Uploaded item"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                {/* Loading shimmer overlay */}
-                <AnimatePresence>
-                  {phase === 'classifying' && (
-                    <motion.div
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      style={{
-                        position: 'absolute', inset: 0,
-                        background: 'rgba(0,0,0,.45)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        backdropFilter: 'blur(2px)',
-                      }}
-                    >
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                        style={{
-                          width: 44, height: 44, borderRadius: '50%',
-                          border: '3px solid rgba(255,255,255,.15)',
-                          borderTopColor: 'var(--ac)',
-                        }}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Result strip */}
-              <AnimatePresence>
-                {hasResult && binInfo && (
-                  <motion.div
-                    initial={{ y: 60, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                    style={{
-                      background: `linear-gradient(to bottom, ${binInfo.color}ee, ${binInfo.color}99)`,
-                      padding: '14px 18px 10px',
-                      display: 'flex', alignItems: 'center', gap: 14,
-                    }}
-                  >
-                    <motion.div
-                      initial={{ scale: 0 }} animate={{ scale: 1 }}
-                      transition={{ delay: .1, type: 'spring', damping: 15 }}
-                      style={{ fontSize: 42, lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,.4))' }}
-                    >
-                      {clsData.bin.emoji}
-                    </motion.div>
-                    <div style={{ flex: 1, minWidth: 0, color: '#fff' }}>
-                      <div style={{
-                        fontFamily: 'var(--fh)', fontWeight: 800, fontSize: 22,
-                        letterSpacing: '-.025em', textTransform: 'capitalize',
-                        textShadow: '0 1px 10px rgba(0,0,0,.35)',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      }}>
-                        {clsData.class}
-                      </div>
-                      <div style={{ fontSize: 12.5, fontWeight: 600, opacity: .92, marginTop: 1 }}>
-                        {binInfo.label}
-                      </div>
-                      <div style={{ fontSize: 11, opacity: .6, marginTop: 1 }}>
-                        {Math.round(clsData.confidence * 100)}% confident
-                      </div>
-                      {clsData.hazardous && (
-                        <div style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 5,
-                          padding: '3px 10px', borderRadius: 999, fontSize: 10, fontWeight: 700,
-                          letterSpacing: '.05em', textTransform: 'uppercase',
-                          background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.2)',
-                        }}>
-                          ⚠ Handle with care
-                        </div>
-                      )}
+                <div style={{ flex: 1, minWidth: 0, color: '#fff' }}>
+                  <div style={{
+                    fontFamily: 'var(--fh)', fontWeight: 800, fontSize: 21,
+                    letterSpacing: '-.025em', textTransform: 'capitalize',
+                    textShadow: '0 1px 10px rgba(0,0,0,.3)',
+                    wordBreak: 'break-word',
+                  }}>
+                    {clsData.class}
+                  </div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, opacity: .93, marginTop: 3 }}>
+                    {binInfo.label}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: 'rgba(0,0,0,.25)', borderRadius: 999,
+                      padding: '3px 10px', fontSize: 11, fontWeight: 600, opacity: .9,
+                    }}>
+                      {Math.round(clsData.confidence * 100)}% confident
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Top-3 bar */}
-        <AnimatePresence>
-          {hasResult && clsData?.top3?.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              style={{
-                position: 'absolute', bottom: hasResult ? 'calc(10px + 80px)' : 0,
-                left: 0, right: 0,
-                background: 'rgba(0,0,0,.62)',
-                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                padding: '7px 14px 9px',
-                display: 'flex', gap: 10,
-              }}
-            >
-              {clsData.top3.map((t, i) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: 'capitalize', opacity: .8, color: '#fff' }}>
-                    {t.class}
+                    {clsData.hazardous && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.25)',
+                        borderRadius: 999, padding: '3px 10px', fontSize: 10, fontWeight: 700,
+                        letterSpacing: '.04em', textTransform: 'uppercase',
+                      }}>
+                        ⚠ Handle with care
+                      </div>
+                    )}
                   </div>
-                  <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,.15)', borderRadius: 999, overflow: 'hidden' }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.round(t.confidence * 100)}%` }}
-                      transition={{ delay: .3 + i * .1, duration: .6, ease: 'easeOut' }}
-                      style={{ height: '100%', background: '#fff', borderRadius: 999 }}
-                    />
-                  </div>
-                  <div style={{ fontSize: 9, opacity: .55, color: '#fff' }}>{Math.round(t.confidence * 100)}%</div>
                 </div>
-              ))}
-            </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Analysing label shown below photo while waiting for LLM */}
+          {phase === 'analysing' && !hasResult && (
+            <div style={{
+              padding: '10px 16px', background: 'var(--s2)',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
+                style={{
+                  width: 16, height: 16, borderRadius: '50%',
+                  border: '2px solid rgba(255,255,255,.12)',
+                  borderTopColor: 'var(--ac)', flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 12.5, color: 'var(--tx3)' }}>Getting detailed analysis…</span>
+            </div>
           )}
-        </AnimatePresence>
-      </div>
+        </div>
+      )}
 
       <input
         ref={inputRef}

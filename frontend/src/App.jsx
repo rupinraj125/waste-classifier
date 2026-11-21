@@ -68,9 +68,10 @@ export default function App() {
       store.setPhase('result')
       store.setHistory([])
 
-      // Auto-speak intro + steps
+      // Auto-speak: use image_desc (already in chosen language) as intro, then steps
       const steps = Array.isArray(a.steps) ? a.steps : []
-      const script = `This is a ${c.class}. ` + steps.map((s, i) => `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`).join('. ')
+      const introLine = a.image_desc || `This is a ${c.class}.`
+      const script = introLine + ' ' + steps.map((s, i) => `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`).join('. ')
       triggerTTS(script, true)
 
     } catch (err) {
@@ -166,16 +167,17 @@ export default function App() {
     } finally { setChatLoading(false) }
   }, [store, triggerTTS])
 
-  // ── Read aloud ─────────────────────────────────────────
+  // ── Read aloud — intro from LLM (already in chosen lang) + steps ─────────
   const handleReadAloud = useCallback(() => {
     if (!store.anaData || !store.clsData) return
     const steps = Array.isArray(store.anaData.steps) ? store.anaData.steps : []
-    const script = `This is a ${store.clsData.class}. ` + steps.map((s, i) => `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`).join('. ')
+    const introLine = store.anaData.image_desc || `This is a ${store.clsData.class}.`
+    const script = introLine + ' ' + steps.map((s, i) => `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`).join('. ')
     triggerTTS(script, true)
   }, [store, triggerTTS])
 
   return (
-    <div style={{ maxWidth: 430, margin: '0 auto', minHeight: '100svh', display: 'flex', flexDirection: 'column', paddingBottom: `calc(90px + env(safe-area-inset-bottom))` }}>
+    <div style={{ maxWidth: 430, margin: '0 auto', minHeight: '100svh', display: 'flex', flexDirection: 'column', paddingBottom: `calc(130px + env(safe-area-inset-bottom))` }}>
 
       <Header
         lang={store.lang}

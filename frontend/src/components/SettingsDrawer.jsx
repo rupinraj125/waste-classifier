@@ -54,6 +54,27 @@ export default function SettingsDrawer({ open, onClose, voice, onVoiceChange, la
   const audRef = React.useRef(new Audio())
   const [tab, setTab] = useState('voice') // voice | usage
 
+  // Realistic preview sentences per voice per language feel
+  const PREVIEW_TEXTS = {
+    'en-IN': {
+      shubh:  'Please separate your dry waste from wet waste before disposal.',
+      aditya: 'Hey! Did you know recycling one plastic bottle saves enough energy to power a light bulb for three hours?',
+      ishita: 'Sort your waste correctly and help keep our city clean and green.',
+      priya:  'Remember, batteries and electronics need special drop-off points, not regular bins.',
+    },
+    'hi-IN': {
+      shubh:  'कृपया अपना सूखा और गीला कचरा अलग-अलग रखें।',
+      aditya: 'क्या आप जानते हैं? एक प्लास्टिक बोतल को रिसाइकल करने से एक बल्ब तीन घंटे जल सकता है।',
+      ishita: 'सही तरीके से कचरा छाँटें और अपने शहर को साफ रखें।',
+      priya:  'बैटरी और इलेक्ट्रॉनिक्स को सामान्य कूड़ेदान में नहीं डालें।',
+    },
+  }
+
+  const getPreviewText = (voiceId) => {
+    const texts = PREVIEW_TEXTS[lang.code] || PREVIEW_TEXTS['en-IN']
+    return texts[voiceId] || texts['shubh']
+  }
+
   const handlePreview = async (v) => {
     setPreviewingId(v.id)
     try {
@@ -61,10 +82,10 @@ export default function SettingsDrawer({ open, onClose, voice, onVoiceChange, la
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: `Hi, I'm ${v.name}. I'll help you sort your waste correctly.`,
+          text: getPreviewText(v.id),
           language_code: lang.code,
           speaker: v.id,
-          full: false,
+          full: true,
         }),
       }).then(r => r.json())
       if (r.audio) {
