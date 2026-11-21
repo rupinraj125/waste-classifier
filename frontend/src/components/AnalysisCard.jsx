@@ -2,6 +2,9 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Volume2, Square, Eye, AlertTriangle, Lightbulb } from 'lucide-react'
 import { BIN_INFO, PROV_LABEL } from '../constants.js'
+import RecyclabilityScore from './RecyclabilityScore.jsx'
+import DidYouKnow         from './DidYouKnow.jsx'
+import CityCard           from './CityCard.jsx'
 
 function CompositionBar({ label, value, color }) {
   return (
@@ -40,12 +43,16 @@ function getComposition(category) {
   return map[category] || map['trash']
 }
 
-export default function AnalysisCard({ ana, cls, speaking, onReadAloud, onStop }) {
+const haptic = (pattern) => { try { navigator.vibrate?.(pattern) } catch {} }
+
+export default function AnalysisCard({ ana, cls, speaking, onReadAloud, onStop, city }) {
   if (!ana || !cls) return null
-  const binInfo = BIN_INFO[cls.bin?.type] || BIN_INFO.landfill
-  const steps   = Array.isArray(ana.steps) ? ana.steps : []
-  const isWaste = ana.is_waste !== false
+
+  const binInfo     = BIN_INFO[cls.bin?.type] || BIN_INFO.landfill
+  const steps       = Array.isArray(ana.steps) ? ana.steps : []
+  const isWaste     = ana.is_waste !== false
   const composition = getComposition(cls.category || cls.class)
+  const category    = cls.category || cls.class
 
   const chipStyle = {
     display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -61,137 +68,132 @@ export default function AnalysisCard({ ana, cls, speaking, onReadAloud, onStop }
 
   const container = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { staggerChildren: .07 } },
+    show:   { opacity: 1, y: 0, transition: { staggerChildren: .06 } },
   }
-  const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }
+  const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }
 
   return (
     <motion.div variants={container} initial="hidden" animate="show"
-      style={{ background: 'var(--s1)', border: '1px solid var(--ln)', borderRadius: 20, overflow: 'hidden' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
     >
-      {/* Provider row */}
-      <motion.div variants={item} style={{
-        display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px',
-        borderBottom: '1px solid var(--ln)', background: 'var(--s2)',
-      }}>
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: binInfo.color, boxShadow: `0 0 8px ${binInfo.glow}`, flexShrink: 0 }} />
-        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--tx3)' }}>Identified by</span>
-        <span style={{ fontSize: 10.5, fontWeight: 700, color: binInfo.color, marginLeft: 'auto' }}>
-          {PROV_LABEL[ana.provider] || ana.provider || 'Groq'}
-        </span>
-      </motion.div>
-
-      {/* AI Sees — now labelled as "About this item" since content is conversational */}
-      <motion.div variants={item} style={{ padding: '14px 14px 0', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-          background: `${binInfo.color}1a`, border: `1px solid ${binInfo.color}44`,
-          display: 'grid', placeItems: 'center', marginTop: 1,
-        }}>
-          <Eye size={15} color={binInfo.color} />
+      {/* ── Main card ─────────────────────────────────────── */}
+      <motion.div variants={item}
+        style={{ background: 'var(--s1)', border: '1px solid var(--ln)', borderRadius: 20, overflow: 'hidden' }}
+      >
+        {/* Provider row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderBottom: '1px solid var(--ln)', background: 'var(--s2)' }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: binInfo.color, boxShadow: `0 0 8px ${binInfo.glow}`, flexShrink: 0 }} />
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--tx3)' }}>Identified by</span>
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: binInfo.color, marginLeft: 'auto' }}>
+            {PROV_LABEL[ana.provider] || ana.provider || 'Groq'}
+          </span>
         </div>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--tx3)', marginBottom: 3 }}>About this item</div>
-          <div style={{ fontSize: 13.5, color: 'var(--tx)', lineHeight: 1.55 }}>{ana.image_desc || `${cls.class} item`}</div>
+
+        {/* About this item */}
+        <div style={{ padding: '14px 14px 0', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, background: `${binInfo.color}1a`, border: `1px solid ${binInfo.color}44`, display: 'grid', placeItems: 'center', marginTop: 1 }}>
+            <Eye size={15} color={binInfo.color} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--tx3)', marginBottom: 3 }}>About this item</div>
+            <div style={{ fontSize: 13.5, color: 'var(--tx)', lineHeight: 1.55 }}>{ana.image_desc || `${cls.class} item`}</div>
+          </div>
         </div>
-      </motion.div>
 
-      {/* Verdict */}
-      <motion.div variants={item} style={{ padding: '11px 14px 0', display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
-        <div style={chipStyle}>{isWaste ? '⚠ Waste' : '✓ Not waste'}</div>
-        <div style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.5, flex: '1 1 100%' }}>{ana.waste_verdict}</div>
-      </motion.div>
+        {/* Verdict */}
+        <div style={{ padding: '11px 14px 0', display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+          <div style={chipStyle}>{isWaste ? '⚠ Waste' : '✓ Not waste'}</div>
+          <div style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.5, flex: '1 1 100%' }}>{ana.waste_verdict}</div>
+        </div>
 
-      {/* Steps — strip "Step N:" prefix since we already show numbered circles */}
-      <motion.div variants={item} style={{ padding: '14px 14px 6px' }}>
-        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)' }}>
-          What to do with it
-        </span>
-      </motion.div>
-      <div style={{ padding: '0 14px 0', display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {steps.map((s, i) => (
-          <motion.div key={i} variants={item} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,
-              background: `linear-gradient(135deg, ${binInfo.color}, ${binInfo.color}bb)`,
-              color: '#fff', fontSize: 11, fontWeight: 800,
-              display: 'grid', placeItems: 'center',
-              boxShadow: `0 2px 8px ${binInfo.glow}`,
-            }}>
-              {i + 1}
+        {/* Steps */}
+        <div style={{ padding: '14px 14px 6px' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)' }}>What to do with it</span>
+        </div>
+        <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                background: `linear-gradient(135deg, ${binInfo.color}, ${binInfo.color}bb)`,
+                color: '#fff', fontSize: 11, fontWeight: 800,
+                display: 'grid', placeItems: 'center',
+                boxShadow: `0 2px 8px ${binInfo.glow}`,
+              }}>{i + 1}</div>
+              <div style={{ fontSize: 13.5, color: 'var(--tx)', lineHeight: 1.6, paddingTop: 1 }}>
+                {String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}
+              </div>
             </div>
-            <div style={{ fontSize: 13.5, color: 'var(--tx)', lineHeight: 1.6, paddingTop: 1 }}>
-              {String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Hazard */}
-      {ana.hazard_note && (
-        <motion.div variants={item} style={{
-          margin: '12px 14px 0', padding: '10px 12px', borderRadius: 12,
-          background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.22)',
-          display: 'flex', gap: 9, alignItems: 'flex-start',
-        }}>
-          <AlertTriangle size={16} color="#fca5a5" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#fca5a5', lineHeight: 1.5 }}>{ana.hazard_note}</div>
-        </motion.div>
-      )}
-
-      {/* Tip */}
-      {ana.quick_tip && (
-        <motion.div variants={item} style={{
-          margin: '9px 14px 0', padding: '10px 12px', borderRadius: 12,
-          background: `${binInfo.color}1a`, border: `1px solid ${binInfo.color}44`,
-          display: 'flex', gap: 9, alignItems: 'flex-start',
-        }}>
-          <Lightbulb size={15} color={binInfo.color} style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.5 }}>{ana.quick_tip}</div>
-        </motion.div>
-      )}
-
-      {/* Waste composition */}
-      <motion.div variants={item} style={{ padding: '14px 14px 0' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)', marginBottom: 10 }}>
-          Waste Composition
+          ))}
         </div>
-        {composition.map((c, i) => (
-          <CompositionBar key={i} label={c.label} value={c.value} color={c.color} />
-        ))}
-      </motion.div>
 
-      {/* Read Aloud */}
-      <motion.div variants={item} style={{ padding: '12px 14px 14px', display: 'flex', gap: 8 }}>
-        {!speaking ? (
-          <button
-            onClick={onReadAloud}
-            disabled={steps.length === 0}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              background: 'var(--s3)', border: '1.5px solid var(--ln2)', borderRadius: 12,
-              padding: '11px 14px', fontSize: 13.5, fontWeight: 600, color: binInfo.color,
-              opacity: steps.length === 0 ? .38 : 1, cursor: steps.length === 0 ? 'default' : 'pointer',
-              transition: 'background .15s',
-            }}
-          >
-            <Volume2 size={15} />
-            Read steps aloud
-          </button>
-        ) : (
-          <button
-            onClick={onStop}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)', borderRadius: 12,
-              padding: '11px 14px', fontSize: 13.5, fontWeight: 600, color: '#fca5a5',
-              transition: 'background .15s',
-            }}
-          >
-            <Square size={15} />
-            Stop reading
-          </button>
+        {/* Hazard */}
+        {ana.hazard_note && (
+          <div style={{ margin: '12px 14px 0', padding: '10px 12px', borderRadius: 12, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.22)', display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+            <AlertTriangle size={16} color="#fca5a5" style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ fontSize: 13, color: '#fca5a5', lineHeight: 1.5 }}>{ana.hazard_note}</div>
+          </div>
         )}
+
+        {/* Quick tip */}
+        {ana.quick_tip && (
+          <div style={{ margin: '9px 14px 0', padding: '10px 12px', borderRadius: 12, background: `${binInfo.color}1a`, border: `1px solid ${binInfo.color}44`, display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+            <Lightbulb size={15} color={binInfo.color} style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.5 }}>{ana.quick_tip}</div>
+          </div>
+        )}
+
+        {/* Waste composition */}
+        <div style={{ padding: '14px 14px 0' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)', marginBottom: 10 }}>Waste Composition</div>
+          {composition.map((c, i) => <CompositionBar key={i} label={c.label} value={c.value} color={c.color} />)}
+        </div>
+
+        {/* Read aloud button */}
+        <div style={{ padding: '12px 14px 14px', display: 'flex', gap: 8 }}>
+          {!speaking ? (
+            <button
+              onClick={() => { haptic(10); onReadAloud() }}
+              disabled={steps.length === 0}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                background: 'var(--s3)', border: '1.5px solid var(--ln2)', borderRadius: 12,
+                padding: '11px 14px', fontSize: 13.5, fontWeight: 600, color: binInfo.color,
+                opacity: steps.length === 0 ? .38 : 1, cursor: steps.length === 0 ? 'default' : 'pointer',
+              }}
+            >
+              <Volume2 size={15} /> Read steps aloud
+            </button>
+          ) : (
+            <button
+              onClick={() => { haptic([10, 50, 10]); onStop() }}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)',
+                borderRadius: 12, padding: '11px 14px', fontSize: 13.5, fontWeight: 600, color: '#fca5a5',
+              }}
+            >
+              <Square size={15} /> Stop reading
+            </button>
+          )}
+        </div>
+      </motion.div>
+
+      {/* ── Recyclability score ─────────────────────────────── */}
+      <motion.div variants={item}>
+        <RecyclabilityScore category={category} acColor={binInfo.color} />
+      </motion.div>
+
+      {/* ── City collection info ─────────────────────────────── */}
+      {city && city.id !== 'other' && (
+        <motion.div variants={item}>
+          <CityCard city={city} acColor={binInfo.color} />
+        </motion.div>
+      )}
+
+      {/* ── Did you know ─────────────────────────────────────── */}
+      <motion.div variants={item}>
+        <DidYouKnow category={category} acColor={binInfo.color} />
       </motion.div>
     </motion.div>
   )

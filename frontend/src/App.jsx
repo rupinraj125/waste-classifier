@@ -1,39 +1,54 @@
-import React, { useRef, useCallback } from 'react'
+import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BIN_INFO } from './constants.js'
 import { classify as apiClassify, analyze as apiAnalyze, chat as apiChat, tts as apiTTS } from './api.js'
 import { useStore } from './useStore.js'
 
-import Header         from './components/Header.jsx'
-import CameraZone     from './components/CameraZone.jsx'
-import Skeleton       from './components/Skeleton.jsx'
-import AnalysisCard   from './components/AnalysisCard.jsx'
-import ChatCard       from './components/ChatCard.jsx'
-import BottomBar      from './components/BottomBar.jsx'
-import SettingsDrawer from './components/SettingsDrawer.jsx'
-import Footer         from './components/Footer.jsx'
+import Header            from './components/Header.jsx'
+import CameraZone        from './components/CameraZone.jsx'
+import Skeleton          from './components/Skeleton.jsx'
+import AnalysisCard      from './components/AnalysisCard.jsx'
+import ChatCard          from './components/ChatCard.jsx'
+import BottomBar         from './components/BottomBar.jsx'
+import SettingsDrawer    from './components/SettingsDrawer.jsx'
+import Footer            from './components/Footer.jsx'
+import ConfidenceWarning from './components/ConfidenceWarning.jsx'
+import ScanHistory       from './components/ScanHistory.jsx'
+import StreakBar         from './components/StreakBar.jsx'
+
+const haptic = (p) => { try { navigator.vibrate?.(p) } catch {} }
 
 export default function App() {
   const store = useStore()
   const fileRef = useRef(null)
-  const [chatLoading, setChatLoading] = React.useState(false)
+  const [chatLoading, setChatLoading] = useState(false)
+  const [earnedNow, setEarnedNow]     = useState(0)
+  const [installPrompt, setInstallPrompt] = useState(null)
+
+  // PWA install prompt capture
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
   const binInfo = store.clsData
     ? (BIN_INFO[store.clsData.bin?.type] || BIN_INFO.landfill)
     : BIN_INFO.recycle
   const acColor = binInfo.color
 
-  // ── Set CSS accent vars ────────────────────────────────
-  React.useEffect(() => {
+  // ── CSS accent vars ────────────────────────────────────────────
+  useEffect(() => {
     const r = document.documentElement
-    r.style.setProperty('--ac', binInfo.color)
+    r.style.setProperty('--ac',  binInfo.color)
     r.style.setProperty('--acl', '#7aadff')
     r.style.setProperty('--acg', binInfo.glow)
     r.style.setProperty('--acs', binInfo.soft)
   }, [binInfo])
 
-  // ── Load image ─────────────────────────────────────────
+  // ── Load image ─────────────────────────────────────────────────
   const handleFile = useCallback((file) => {
+    haptic(10)
     const url = URL.createObjectURL(file)
     const im  = new Image()
     im.onload = () => {
@@ -49,44 +64,13 @@ export default function App() {
     im.src = url
   }, [store])
 
-  // ── Classify + Analyse ─────────────────────────────────
-  const handleAnalyse = useCallback(async () => {
-    if (!store.img64) return
-    store.setPhase('classifying')
-    store.setError('')
-    try {
-      const c = await apiClassify(store.img64)
-      store.bumpUsage('classify')
-      if (c.error) throw new Error(c.error)
-      store.setClsData(c)
-      store.setPhase('analysing')
-
-      const a = await apiAnalyze(c.class, c.category || c.class, c.bin?.type, c.confidence, c.is_waste !== false, store.lang.code)
-      store.bumpUsage('chat')
-      if (a.error) throw new Error(a.error)
-      store.setAnaData(a)
-      store.setPhase('result')
-      store.setHistory([])
-
-      // Auto-speak: use image_desc (already in chosen language) as intro, then steps
-      const steps = Array.isArray(a.steps) ? a.steps : []
-      const introLine = a.image_desc || `This is a ${c.class}.`
-      const script = introLine + ' ' + steps.map((s, i) => `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`).join('. ')
-      triggerTTS(script, true)
-
-    } catch (err) {
-      store.setPhase(store.clsData ? 'result' : 'loaded')
-      store.setError('Could not identify — try a clearer, closer photo.')
-      console.error(err)
-    }
-  }, [store])
-
-  // ── TTS ────────────────────────────────────────────────
-  const triggerTTS = useCallback(async (text, full = false, btn = null) => {
+  // ── TTS ────────────────────────────────────────────────────────
+  const triggerTTS = useCallback(async (text, full = false) => {
     store.stopRef.current = false
     store.setSpeaking(true)
     try {
-      const r = await apiTTS(text, store.lang.code, store.voice.id, full)
+      const pace = store.ttsSpeed?.pace ?? 1.05
+      const r = await apiTTS(text, store.lang.code, store.voice.id, full, pace)
       store.bumpUsage('tts', text.length)
       if (r.disabled || r.error || !r.audio) throw new Error('disabled')
       if (store.stopRef.current) return
@@ -97,17 +81,88 @@ export default function App() {
         store.audRef.current.onended = res
         store.audRef.current.onerror = res
       })
-    } catch { }
+    } catch {}
     finally { store.setSpeaking(false) }
   }, [store])
 
-  // ── Language change — retranslate + auto-speak in new language ───────────
+  // ── Classify + Analyse ─────────────────────────────────────────
+  const handleAnalyse = useCallback(async () => {
+    if (!store.img64) return
+    haptic([20, 10, 20])
+    store.setPhase('classifying')
+    store.setError('')
+    try {
+      const c = await apiClassify(store.img64)
+      store.bumpUsage('classify')
+      if (c.error) throw new Error(c.error)
+      store.setClsData(c)
+      haptic(15)
+      store.setPhase('analysing')
+
+      const a = await apiAnalyze(c.class, c.category || c.class, c.bin?.type, c.confidence, c.is_waste !== false, store.lang.code)
+      store.bumpUsage('chat')
+      if (a.error) throw new Error(a.error)
+      store.setAnaData(a)
+      store.setPhase('result')
+      store.setHistory([])
+
+      // Award points + streak
+      const pts = store.awardPoints(c.bin?.type)
+      setEarnedNow(pts)
+      setTimeout(() => setEarnedNow(0), 3000)
+      haptic([10, 50, 20, 50, 30])
+
+      // Add to scan log
+      store.addScan({
+        label:   c.class,
+        binType: c.bin?.type,
+        img64:   store.img64,
+        ts:      Date.now(),
+      })
+
+      // Auto-speak
+      const steps    = Array.isArray(a.steps) ? a.steps : []
+      const introLine = a.image_desc || `This is a ${c.class}.`
+      const script   = introLine + ' ' + steps.map((s, i) =>
+        `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`
+      ).join('. ')
+      triggerTTS(script, true)
+
+    } catch (err) {
+      store.setPhase(store.clsData ? 'result' : 'loaded')
+      store.setError('Could not identify — try a clearer, closer photo.')
+      haptic([50, 100, 50])
+      console.error(err)
+    }
+  }, [store, triggerTTS])
+
+  // ── Confidence: user manually confirms an alternative ──────────
+  const handleConfirm = useCallback(async (confirmedLabel, confirmedCategory) => {
+    if (!store.clsData) return
+    haptic(10)
+    const updated = { ...store.clsData, class: confirmedLabel, category: confirmedCategory, confidence: 1.0 }
+    store.setClsData(updated)
+    store.setAnaData(null)
+    store.setPhase('analysing')
+    try {
+      const a = await apiAnalyze(confirmedLabel, confirmedCategory, updated.bin?.type, 1.0, updated.is_waste !== false, store.lang.code)
+      store.bumpUsage('chat')
+      if (!a.error) {
+        store.setAnaData(a)
+        store.setPhase('result')
+        const steps = Array.isArray(a.steps) ? a.steps : []
+        const intro = a.image_desc || `This is a ${confirmedLabel}.`
+        triggerTTS(intro + ' ' + steps.map((s, i) => `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`).join('. '), true)
+      }
+    } catch {}
+  }, [store, triggerTTS])
+
+  // ── Language change — retranslate + auto-speak ─────────────────
   const handleLangChange = useCallback(async (newLang) => {
     store.setLang(newLang)
     store.stopSpeaking()
-
     if (store.clsData && store.anaData) {
-      store.setAnaData(null) // show skeleton while re-translating
+      store.setAnaData(null)
       try {
         const a = await apiAnalyze(
           store.clsData.class, store.clsData.category || store.clsData.class,
@@ -117,17 +172,12 @@ export default function App() {
         store.bumpUsage('chat')
         if (!a.error) {
           store.setAnaData(a)
-
-          // Auto-speak the translated content immediately
           const steps = Array.isArray(a.steps) ? a.steps : []
-          const introLine = a.image_desc || `This is a ${store.clsData.class}.`
-          const script = introLine + ' ' + steps.map((s, i) =>
+          const intro = a.image_desc || `This is a ${store.clsData.class}.`
+          setTimeout(() => triggerTTS(intro + ' ' + steps.map((s, i) =>
             `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`
-          ).join('. ')
-          // Small delay so state settles before TTS fires
-          setTimeout(() => triggerTTS(script, true), 300)
+          ).join('. '), true), 300)
 
-          // Also retranslate chat history
           if (store.history.length > 0) {
             const newHistory = []
             for (const msg of store.history) {
@@ -142,20 +192,19 @@ export default function App() {
                   store.bumpUsage('chat')
                   newHistory.push({ ...msg, content: r.text || msg.content })
                 } catch { newHistory.push(msg) }
-              } else {
-                newHistory.push(msg)
-              }
+              } else { newHistory.push(msg) }
             }
             store.setHistory(newHistory)
           }
         }
-      } catch { }
+      } catch {}
     }
   }, [store, triggerTTS])
 
-  // ── Chat send ──────────────────────────────────────────
+  // ── Chat send ──────────────────────────────────────────────────
   const handleChatSend = useCallback(async (text) => {
     if (!store.clsData) return
+    haptic(8)
     const userMsg = { role: 'user', content: text }
     store.setHistory(h => [...h, userMsg])
     setChatLoading(true)
@@ -163,8 +212,7 @@ export default function App() {
       const r = await apiChat(
         store.clsData.class, store.clsData.category || store.clsData.class,
         store.clsData.bin?.type, store.clsData.confidence,
-        store.lang.code,
-        [...store.history, userMsg]
+        store.lang.code, [...store.history, userMsg]
       )
       store.bumpUsage('chat')
       if (r.error || !r.text) throw new Error('no text')
@@ -176,50 +224,57 @@ export default function App() {
     } finally { setChatLoading(false) }
   }, [store, triggerTTS])
 
-  // ── Read aloud — intro from LLM (already in chosen lang) + steps ─────────
+  // ── Read aloud ─────────────────────────────────────────────────
   const handleReadAloud = useCallback(() => {
     if (!store.anaData || !store.clsData) return
-    const steps = Array.isArray(store.anaData.steps) ? store.anaData.steps : []
-    const introLine = store.anaData.image_desc || `This is a ${store.clsData.class}.`
-    const script = introLine + ' ' + steps.map((s, i) => `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`).join('. ')
+    const steps    = Array.isArray(store.anaData.steps) ? store.anaData.steps : []
+    const intro    = store.anaData.image_desc || `This is a ${store.clsData.class}.`
+    const script   = intro + ' ' + steps.map((s, i) =>
+      `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`
+    ).join('. ')
     triggerTTS(script, true)
   }, [store, triggerTTS])
 
   return (
     <div style={{ maxWidth: 430, margin: '0 auto', minHeight: '100svh', display: 'flex', flexDirection: 'column', paddingBottom: `calc(130px + env(safe-area-inset-bottom))` }}>
 
-      <Header
-        lang={store.lang}
-        onLangChange={handleLangChange}
-        onSettingsOpen={() => store.setSettingsOpen(true)}
-        acColor={acColor}
-      />
+      <Header lang={store.lang} onLangChange={handleLangChange} onSettingsOpen={() => store.setSettingsOpen(true)} acColor={acColor} />
 
-      <CameraZone
-        img64={store.img64}
-        clsData={store.clsData}
-        phase={store.phase}
-        onFile={handleFile}
-      />
+      {/* Streak bar */}
+      <StreakBar points={store.points} streak={store.streak} earnedNow={earnedNow} />
 
-      {/* Scroll body */}
+      {/* Scan history */}
+      {store.scanLog.length > 0 && store.phase === 'idle' && (
+        <div style={{ marginTop: 10 }}>
+          <ScanHistory log={store.scanLog} onClear={store.clearLog} />
+        </div>
+      )}
+
+      <CameraZone img64={store.img64} clsData={store.clsData} phase={store.phase} onFile={handleFile} />
+
       <div style={{ padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
         {/* Error */}
         <AnimatePresence>
           {store.error && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               style={{ textAlign: 'center', fontSize: 12.5, color: '#ef4444', padding: '0 4px' }}
-            >
-              {store.error}
+            >{store.error}</motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Confidence warning */}
+        <AnimatePresence>
+          {store.clsData && store.clsData.confidence < 0.6 && store.phase === 'result' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ConfidenceWarning clsData={store.clsData} onConfirm={handleConfirm} />
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Skeleton */}
         <AnimatePresence>
-          {(store.phase === 'analysing' && !store.anaData) && (
+          {store.phase === 'analysing' && !store.anaData && (
             <motion.div key="skel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Skeleton />
             </motion.div>
@@ -236,6 +291,7 @@ export default function App() {
                 speaking={store.speaking}
                 onReadAloud={handleReadAloud}
                 onStop={store.stopSpeaking}
+                city={store.city}
               />
             </motion.div>
           )}
@@ -255,18 +311,42 @@ export default function App() {
           )}
         </AnimatePresence>
 
+        {/* PWA install banner */}
+        <AnimatePresence>
+          {installPrompt && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: 'var(--s2)', border: '1px solid var(--ln2)',
+                borderRadius: 14, padding: '10px 14px',
+              }}
+            >
+              <span style={{ fontSize: 20 }}>📲</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tx)' }}>Install Which Bin?</div>
+                <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>Add to home screen for instant access</div>
+              </div>
+              <button
+                onClick={async () => {
+                  installPrompt.prompt()
+                  const { outcome } = await installPrompt.userChoice
+                  if (outcome === 'accepted') setInstallPrompt(null)
+                }}
+                style={{ padding: '6px 12px', borderRadius: 8, background: acColor, color: '#fff', fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}
+              >
+                Install
+              </button>
+              <button onClick={() => setInstallPrompt(null)} style={{ color: 'var(--tx3)', fontSize: 18, lineHeight: 1, flexShrink: 0 }}>×</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <Footer />
       </div>
 
-      <BottomBar
-        phase={store.phase}
-        onShoot={() => fileRef.current?.click()}
-        onAnalyse={handleAnalyse}
-        onReset={store.reset}
-        acColor={acColor}
-      />
+      <BottomBar phase={store.phase} onShoot={() => fileRef.current?.click()} onAnalyse={handleAnalyse} onReset={store.reset} acColor={acColor} />
 
-      {/* Hidden file input for BottomBar */}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files[0]; if (f) handleFile(f); e.target.value = '' }} />
 
@@ -277,7 +357,13 @@ export default function App() {
         onVoiceChange={(v) => { store.setVoice(v); store.stopSpeaking() }}
         lang={store.lang}
         onLangChange={handleLangChange}
+        ttsSpeed={store.ttsSpeed}
+        onSpeedChange={store.setSpeed}
+        city={store.city}
+        onCityChange={store.setCity}
         usage={store.usage}
+        points={store.points}
+        streak={store.streak}
       />
     </div>
   )

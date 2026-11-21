@@ -38,14 +38,14 @@ def _trim(text: str, full: bool) -> str:
     return out or text[:FAST_LIMIT]
 
 
-def synthesize(text: str, lang: str, speaker: str) -> str:
+def synthesize(text: str, lang: str, speaker: str, pace: float = 1.05) -> str:
     payload = json.dumps({
         "text":               text,
         "language_code":      lang,
         "model":              MODEL,
         "speaker":            speaker,
         "output_audio_codec": "mp3",
-        "pace":               1.05,
+        "pace":               max(0.5, min(2.0, pace)),  # clamp to safe range
     }).encode()
     req = urllib.request.Request(
         URL, data=payload,
@@ -78,8 +78,9 @@ class handler(BaseHTTPRequestHandler):
             if not raw_text:
                 return self._send(400, {"error": "No text provided."})
             speaker  = (d.get("speaker") or DEFAULT_SPEAKER).strip()
+            pace     = float(d.get("pace", 1.05))
             text     = _trim(raw_text, bool(d.get("full")))
-            audio    = synthesize(text, d.get("language_code", "en-IN"), speaker)
+            audio    = synthesize(text, d.get("language_code", "en-IN"), speaker, pace)
             self._send(200, {"audio": audio, "mime": "audio/mpeg"})
         except urllib.error.HTTPError as e:
             self._send(502, {"error": f"Sarvam error {e.code}: {e.read().decode()[:200]}"})
