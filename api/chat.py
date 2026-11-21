@@ -1,17 +1,17 @@
 """
-POST /api/chat  — 100% Groq (qwen/qwen3.8-27b), Gemini as fallback only.
+POST /api/chat — Groq primary, Gemini fallback.
 
 Mode 1 — type="analyze"
-  body: { type, label, category, bin, confidence, lang, is_waste }
-  Returns structured JSON — ALL strings in the chosen language:
-  { type, image_desc, is_waste, waste_verdict, steps[4], hazard_note, quick_tip, provider }
+  Returns JSON with ALL strings in the chosen language/style.
+  - If not waste (human, food still being eaten, furniture in use): tell them kindly
+    to retake or explains why it doesn't belong in a waste bin.
+  - Tamil → Tanglish (Tamil + English mix, natural spoken style)
+  - Hindi → Hinglish (Hindi + English mix, natural spoken style)
+  - English → Clear, friendly, natural spoken British-Indian English
+  - Other Indian languages → natural spoken style, not formal/literary
 
 Mode 2 — type="chat"
-  body: { type, label, category, bin, confidence, lang, messages[] }
-  Returns: { type, text, lang, provider }
-
-LANGUAGE: every string in the response is written in the requested language
-so Sarvam TTS reads it correctly.
+  Conversational follow-up. Same language/style rules apply.
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, urllib.request, urllib.error
@@ -25,45 +25,124 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL",     "gemini-3.5-flash-lite")
 
 UA = "WasteSorterApp/2.0"
 
-LANGS = {
-    "en-IN": "English",    "hi-IN": "Hindi",     "ta-IN": "Tamil",
-    "te-IN": "Telugu",     "kn-IN": "Kannada",   "ml-IN": "Malayalam",
-    "mr-IN": "Marathi",    "gu-IN": "Gujarati",  "bn-IN": "Bengali",
-    "pa-IN": "Punjabi",    "od-IN": "Odia",
+# Language → style instruction for the LLM
+LANG_STYLE = {
+    "en-IN": (
+        "English",
+        "Write in clear, warm, natural British-Indian English. "
+        "Like a knowledgeable friend texting you — casual, direct, no jargon. "
+        "Use contractions (it's, don't, you'll). Never use passive voice or formal phrasing."
+    ),
+    "hi-IN": (
+        "Hindi",
+        "Hinglish mein likho — yani Hindi aur English ka natural mix, "
+        "jaise hum WhatsApp pe baat karte hain. "
+        "Example: 'Yeh plastic bottle hai, isse recycle bin mein daalo. Cap on rakhna theek hai!' "
+        "Formal/literary Hindi bilkul mat use karo. Aam bolchal ki bhasha use karo."
+    ),
+    "ta-IN": (
+        "Tamil",
+        "Tanglish use panunga — Tamil aur English mix, natural-a pesuvadhu mathiri. "
+        "Example: 'Ithu plastic bottle, recycle bin-la podunga. Cap remove pannanum nu nenaikkaadheega!' "
+        "Formal Tamil use pannaadheenga. Normal-a pesuvathu mathiri ezhudhunga."
+    ),
+    "te-IN": (
+        "Telugu",
+        "Natural spoken Telugu use cheyyandi — formal/literary Telugu avoid cheyyandi. "
+        "Friendly ga, direct ga, ee item gurinchi mee friend cheppinatu cheyyandi."
+    ),
+    "kn-IN": (
+        "Kannada",
+        "Natural spoken Kannada use maadi — formal/literary Kannada avoid maadi. "
+        "Friendly aagi, direct aagi, nimage friend heluvante heliri."
+    ),
+    "ml-IN": (
+        "Malayalam",
+        "Natural spoken Malayalam use cheyyuka — formal/literary Malayalam avoid cheyyuka. "
+        "Friendly ayi, direct ayi, ninakku oru kootukaran parayunna pole ezhuthuka."
+    ),
+    "mr-IN": (
+        "Marathi",
+        "Natural spoken Marathi use kara — formal/literary Marathi avoid kara. "
+        "Mitra sarkhe bolnyasarkhe lihaa, direct ani friendly."
+    ),
+    "gu-IN": (
+        "Gujarati",
+        "Natural spoken Gujarati use karo — formal/literary Gujarati avoid karo. "
+        "Mitra ne kahi ne jeva bolava jevo likho, direct ane friendly."
+    ),
+    "bn-IN": (
+        "Bengali",
+        "Natural spoken Bengali use koro — formal/literary Bengali avoid koro. "
+        "Bondhur moto bolte bolte likho, direct ebong friendly."
+    ),
+    "pa-IN": (
+        "Punjabi",
+        "Natural spoken Punjabi use karo — formal/literary Punjabi avoid karo. "
+        "Yaar naal gallan karda hova likhna, direct te friendly."
+    ),
+    "od-IN": (
+        "Odia",
+        "Natural spoken Odia use kara — formal/literary Odia avoid kara. "
+        "Bondhu sathire kathaa kahibaa pare lekha, direct ebam friendly."
+    ),
 }
 
 
-def _sys_analyze(label, category, bin_type, conf, lang_name, is_waste):
-    extra = "" if is_waste else " This item may not be typical waste — still give practical guidance on what to do with it."
+def _sys_analyze(label, category, bin_type, conf, lang_code, is_waste):
+    lang_name, style_note = LANG_STYLE.get(lang_code, LANG_STYLE["en-IN"])
+
+    # Non-waste or human: different response
+    if not is_waste or category in ("person", "human", "animal", "food_active"):
+        non_waste_note = (
+            f"IMPORTANT: This item ('{label}') is NOT waste or is NOT something that belongs in a bin. "
+            f"Tell the user warmly that this doesn't look like waste — maybe they scanned the wrong thing, "
+            f"or the camera picked up something unexpected. Ask them to retake the photo with just the waste item. "
+            f"Keep is_waste as false. Give 0 steps (empty array). "
+            f"Make image_desc describe what you think was actually scanned."
+        )
+    else:
+        non_waste_note = ""
+
+    # Decide how many steps based on item complexity
+    step_guidance = (
+        "Give ONLY 2 steps if disposal is simple (e.g. paper, cardboard, food waste). "
+        "Give 3 steps for moderate items (plastic, glass, clothes). "
+        "Give 4 steps ONLY for complex/hazardous items (batteries, electronics, e-waste). "
+        "Do NOT pad with obvious filler steps."
+    )
+
     return (
-        f"You are a helpful, friendly neighbour who knows everything about waste sorting in India.{extra}\n"
-        f"The user just photographed their '{label}' (category: '{category}', bin: '{bin_type}', confidence: {conf:.0%}).\n\n"
-        f"Write everything in {lang_name} from the user's perspective — like you're talking directly to them.\n"
-        f"Be conversational, warm, and practical. NOT textbook. NOT robotic.\n"
-        f"Use 'you', 'your', 'just', 'make sure', 'don't worry' — everyday language.\n"
-        f"Each step should feel like a helpful tip from a friend, not an instruction manual.\n\n"
+        f"You are a real person — a helpful, slightly witty neighbour in India who actually knows "
+        f"their waste sorting. {non_waste_note}\n\n"
+        f"The user photographed: '{label}' (category: '{category}', bin: '{bin_type}', confidence: {conf:.0%}).\n\n"
+        f"LANGUAGE & STYLE: {style_note}\n\n"
+        f"VOICE TONE: Write as if this will be READ ALOUD by a voice assistant. "
+        f"Short sentences. Natural pauses (use commas). "
+        f"Emotional where appropriate — reassuring for hazardous, matter-of-fact for simple items, "
+        f"slightly urgent for batteries/electronics. "
+        f"NO bullet points, NO bold/italic, NO markdown. JUST natural spoken language.\n\n"
+        f"{step_guidance}\n\n"
         "Reply ONLY as a valid JSON object — no markdown, no code fences:\n"
-        '{"image_desc":"One natural sentence about what this specific item looks like to you",'
+        '{"image_desc":"One warm, natural sentence describing what this item is — like you are seeing it",'
         '"is_waste":true,'
-        '"waste_verdict":"One sentence telling them exactly which bin to use and why it matters",'
-        '"steps":["step 1 — friendly, specific, actionable","step 2","step 3","step 4"],'
-        '"hazard_note":"One sentence warning them about a real risk with this item — or JSON null if safe",'
-        '"quick_tip":"A memorable, practical tip under 12 words that makes their life easier"}\n\n'
-        f"RULES:\n"
-        f"- All 4 steps must be specific to '{label}' — not copy-paste generic advice.\n"
-        f"- Steps should address what most people get WRONG with this item.\n"
-        f"- quick_tip should be something they will actually remember and use.\n"
-        f"- Write everything in {lang_name}."
+        '"waste_verdict":"One sentence: exactly which bin and why — make it stick in memory",'
+        '"steps":["step one text","step two text"],'
+        '"hazard_note":"One urgent, specific warning if hazardous — JSON null if safe",'
+        '"quick_tip":"One memorable line under 12 words that they will actually remember"}\n\n'
+        f"ALL text must be in the {lang_name} style described above. "
+        f"Steps must address the most common MISTAKE people make with this specific item."
     )
 
 
-def _sys_chat(label, category, bin_type, conf, lang_name):
+def _sys_chat(label, category, bin_type, conf, lang_code):
+    lang_name, style_note = LANG_STYLE.get(lang_code, LANG_STYLE["en-IN"])
     return (
-        f"You are a friendly, knowledgeable neighbour helping someone sort their waste in India.\n"
-        f"They have a '{label}' (category: '{category}', bin: '{bin_type}', confidence: {conf:.0%}).\n"
-        f"Answer their question in a warm, direct, conversational way — like texting a helpful friend.\n"
-        f"Use everyday language. If they're doing something wrong, gently correct them.\n"
-        f"CRITICAL: Reply ONLY in {lang_name}. Keep it to 2–3 sentences. No bullet points, no markdown."
+        f"You are a helpful neighbour answering a waste-sorting question about a '{label}' "
+        f"(category: '{category}', bin: '{bin_type}').\n"
+        f"Answer like you're replying to a WhatsApp message — short, direct, friendly, honest.\n"
+        f"LANGUAGE & STYLE: {style_note}\n"
+        f"Keep it to 2 sentences MAX. No lists, no markdown."
     )
 
 
@@ -77,7 +156,7 @@ def _post(url, body_dict, extra_hdrs):
         return json.loads(r.read())
 
 
-def _groq(sys_text, messages, max_tokens=900, temp=0.3, json_mode=False):
+def _groq(sys_text, messages, max_tokens=900, temp=0.4, json_mode=False):
     body = {
         "model":       GROQ_MODEL,
         "messages":    [{"role": "system", "content": sys_text}] + messages,
@@ -90,7 +169,7 @@ def _groq(sys_text, messages, max_tokens=900, temp=0.3, json_mode=False):
     return out["choices"][0]["message"]["content"].strip()
 
 
-def _gemini(sys_text, messages, max_tokens=900, temp=0.3):
+def _gemini(sys_text, messages, max_tokens=900, temp=0.4):
     def _r(r): return "model" if r == "assistant" else r
     contents = [{"role": _r(m["role"]), "parts": [{"text": m["content"]}]} for m in messages]
     body = {
@@ -108,7 +187,7 @@ def _gemini(sys_text, messages, max_tokens=900, temp=0.3):
     return text
 
 
-def _llm(sys_text, messages, max_tokens=900, temp=0.3, json_mode=False):
+def _llm(sys_text, messages, max_tokens=900, temp=0.4, json_mode=False):
     if GROQ_KEY:
         try:
             return _groq(sys_text, messages, max_tokens, temp, json_mode), "groq"
@@ -123,10 +202,9 @@ def _llm(sys_text, messages, max_tokens=900, temp=0.3, json_mode=False):
 
 
 def do_analyze(label, category, bin_type, conf, lang, is_waste):
-    lang_name = LANGS.get(lang, "English")
-    sys_text  = _sys_analyze(label, category, bin_type, conf, lang_name, is_waste)
-    msgs      = [{"role": "user", "content": f"Analyze the '{label}' item now."}]
-    raw, prov = _llm(sys_text, msgs, max_tokens=900, temp=0.3, json_mode=True)
+    sys_text  = _sys_analyze(label, category, bin_type, conf, lang, is_waste)
+    msgs      = [{"role": "user", "content": f"Analyze '{label}' now."}]
+    raw, prov = _llm(sys_text, msgs, max_tokens=900, temp=0.4, json_mode=True)
     parsed    = json.loads(raw)
     steps = parsed.get("steps")
     if not isinstance(steps, list): steps = []
@@ -137,12 +215,11 @@ def do_analyze(label, category, bin_type, conf, lang, is_waste):
 
 
 def do_chat(label, category, bin_type, conf, lang, messages):
-    lang_name = LANGS.get(lang, "English")
-    sys_text  = _sys_chat(label, category, bin_type, conf, lang_name)
+    sys_text  = _sys_chat(label, category, bin_type, conf, lang)
     history   = [m for m in messages
                  if m.get("role") in ("user", "assistant") and m.get("content")]
     if not history:
-        history = [{"role": "user", "content": "Give me a brief disposal summary."}]
+        history = [{"role": "user", "content": "Quick summary please."}]
     text, prov = _llm(sys_text, history[-8:], max_tokens=350, temp=0.5)
     return {"type": "chat", "text": text, "lang": lang, "provider": prov}
 

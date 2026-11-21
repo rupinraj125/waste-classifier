@@ -64,13 +64,14 @@ export default function App() {
     im.src = url
   }, [store])
 
-  // ── TTS ────────────────────────────────────────────────────────
-  const triggerTTS = useCallback(async (text, full = false) => {
+  // ── TTS — accepts explicit langCode to fix mid-session language-switch bug ──
+  const triggerTTS = useCallback(async (text, full = false, langCode = null) => {
     store.stopRef.current = false
     store.setSpeaking(true)
     try {
-      const pace = store.ttsSpeed?.pace ?? 1.05
-      const r = await apiTTS(text, store.lang.code, store.voice.id, full, pace)
+      const pace   = store.ttsSpeed?.pace ?? 1.0
+      const lc     = langCode || store.lang.code   // use explicit lang if provided
+      const r = await apiTTS(text, lc, store.voice.id, full, pace)
       store.bumpUsage('tts', text.length)
       if (r.disabled || r.error || !r.audio) throw new Error('disabled')
       if (store.stopRef.current) return
@@ -157,12 +158,12 @@ export default function App() {
     } catch {}
   }, [store, triggerTTS])
 
-  // ── Language change — retranslate + auto-speak ─────────────────
+  // ── Language change — retranslate + auto-speak in NEW language ───────────
   const handleLangChange = useCallback(async (newLang) => {
-    store.setLang(newLang)
-    store.stopSpeaking()
+    store.stopSpeaking()           // stop any current audio immediately
+    store.setLang(newLang)         // update lang state
     if (store.clsData && store.anaData) {
-      store.setAnaData(null)
+      store.setAnaData(null)       // show skeleton while refetching
       try {
         const a = await apiAnalyze(
           store.clsData.class, store.clsData.category || store.clsData.class,
@@ -172,12 +173,18 @@ export default function App() {
         store.bumpUsage('chat')
         if (!a.error) {
           store.setAnaData(a)
-          const steps = Array.isArray(a.steps) ? a.steps : []
-          const intro = a.image_desc || `This is a ${store.clsData.class}.`
-          setTimeout(() => triggerTTS(intro + ' ' + steps.map((s, i) =>
-            `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`
-          ).join('. '), true), 300)
+          // Build script from freshly translated content
+          const steps  = Array.isArray(a.steps) ? a.steps : []
+          const intro  = a.image_desc || `This is a ${store.clsData.class}.`
+          const script = intro + (steps.length
+            ? ' ' + steps.map((s, i) =>
+                `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`
+              ).join('. ')
+            : '')
+          // Pass newLang.code explicitly — avoids stale closure reading old lang
+          triggerTTS(script, true, newLang.code)
 
+          // Retranslate chat history
           if (store.history.length > 0) {
             const newHistory = []
             for (const msg of store.history) {
