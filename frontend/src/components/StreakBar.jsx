@@ -1,12 +1,10 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Flame, Star } from 'lucide-react'
 
 export default function StreakBar({ points, streak, earnedNow }) {
-  const [showBadge, setShowBadge] = useState(!!earnedNow)
-
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 0' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px 0' }}>
       {/* Streak */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 5,
@@ -31,13 +29,14 @@ export default function StreakBar({ points, streak, earnedNow }) {
         </span>
       </div>
 
-      {/* Earned badge — pops up when user gets new points */}
+      {/* +N pts badge — driven purely by earnedNow prop, no internal state */}
       <AnimatePresence>
         {earnedNow > 0 && (
           <motion.div
+            key={`badge-${earnedNow}`}
             initial={{ opacity: 0, scale: .6, y: 4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: .6, y: -4 }}
+            exit={{ opacity: 0, scale: .7, y: -6 }}
             transition={{ type: 'spring', damping: 14 }}
             style={{
               display: 'flex', alignItems: 'center', gap: 4,

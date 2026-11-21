@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { VOICES, LANGUAGES, TTS_SPEEDS, CITIES } from './constants.js'
 
 const LS = {
@@ -38,8 +38,23 @@ export function useStore() {
   const [scanLog, setScanLog] = useState(() => LS.get('scanLog', []))
 
   const addScan = useCallback((entry) => {
+    // Downscale thumbnail to 64px before storing — prevents localStorage quota issues
+    const thumb = entry.img64
+      ? (() => {
+          try {
+            const img = new Image()
+            img.src = entry.img64
+            const cv = document.createElement('canvas')
+            const s = Math.min(1, 64 / Math.max(img.naturalWidth || 64, img.naturalHeight || 64))
+            cv.width  = Math.round((img.naturalWidth  || 64) * s)
+            cv.height = Math.round((img.naturalHeight || 64) * s)
+            cv.getContext('2d')?.drawImage(img, 0, 0, cv.width, cv.height)
+            return cv.toDataURL('image/jpeg', 0.5)
+          } catch { return null }
+        })()
+      : null
     setScanLog(prev => {
-      const updated = [entry, ...prev].slice(0, 20)
+      const updated = [{ ...entry, img64: thumb }, ...prev].slice(0, 20)
       LS.set('scanLog', updated)
       return updated
     })

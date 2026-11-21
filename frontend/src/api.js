@@ -34,13 +34,4 @@ export const chat = (label, category, bin, confidence, lang, messages) =>
 export const tts = (text, languageCode, speaker, full = false, pace = 1.05) =>
   post('/api/tts', { text, language_code: languageCode, speaker, full, pace })
 
-export const retranslate = (label, category, bin, confidence, isWaste, lang) =>
-  post('/api/chat', {
-    type: 'analyze',
-    label,
-    category,
-    bin,
-    confidence,
-    is_waste: isWaste,
-    lang,
-  })
+
