@@ -34,36 +34,36 @@ LANGS = {
 
 
 def _sys_analyze(label, category, bin_type, conf, lang_name, is_waste):
-    extra = "" if is_waste else " Note: this item may not be typical waste — still give guidance."
+    extra = "" if is_waste else " This item may not be typical waste — still give practical guidance on what to do with it."
     return (
-        f"You are a waste-disposal expert for Indian households.{extra}\n"
-        f"The user photographed a specific item: '{label}' "
-        f"(waste category: '{category}', bin: '{bin_type}', confidence: {conf:.0%}).\n\n"
-        f"RULES:\n"
-        f"1. Write EVERY string value in {lang_name} only.\n"
-        f"2. image_desc must describe THIS specific item '{label}', not a generic waste type.\n"
-        f"3. Steps must be specific to '{label}' — not generic advice.\n"
-        f"4. hazard_note must be specific to risks of '{label}', or JSON null if safe.\n\n"
+        f"You are a helpful, friendly neighbour who knows everything about waste sorting in India.{extra}\n"
+        f"The user just photographed their '{label}' (category: '{category}', bin: '{bin_type}', confidence: {conf:.0%}).\n\n"
+        f"Write everything in {lang_name} from the user's perspective — like you're talking directly to them.\n"
+        f"Be conversational, warm, and practical. NOT textbook. NOT robotic.\n"
+        f"Use 'you', 'your', 'just', 'make sure', 'don't worry' — everyday language.\n"
+        f"Each step should feel like a helpful tip from a friend, not an instruction manual.\n\n"
         "Reply ONLY as a valid JSON object — no markdown, no code fences:\n"
-        "{\"image_desc\":\"1 sentence describing this exact item\","
-        "\"is_waste\":true,"
-        "\"waste_verdict\":\"1 sentence: exact waste type and correct bin for this item\","
-        "\"steps\":[\"step 1\",\"step 2\",\"step 3\",\"step 4\"],"
-        "\"hazard_note\":\"specific safety warning for this item, or JSON null\","
-        "\"quick_tip\":\"one memorable tip under 12 words, specific to this item\"}\n\n"
-        f"All 4 steps must be practical for India and specific to '{label}'. "
-        f"All text in {lang_name}."
+        '{"image_desc":"One natural sentence about what this specific item looks like to you",'
+        '"is_waste":true,'
+        '"waste_verdict":"One sentence telling them exactly which bin to use and why it matters",'
+        '"steps":["step 1 — friendly, specific, actionable","step 2","step 3","step 4"],'
+        '"hazard_note":"One sentence warning them about a real risk with this item — or JSON null if safe",'
+        '"quick_tip":"A memorable, practical tip under 12 words that makes their life easier"}\n\n'
+        f"RULES:\n"
+        f"- All 4 steps must be specific to '{label}' — not copy-paste generic advice.\n"
+        f"- Steps should address what most people get WRONG with this item.\n"
+        f"- quick_tip should be something they will actually remember and use.\n"
+        f"- Write everything in {lang_name}."
     )
 
 
 def _sys_chat(label, category, bin_type, conf, lang_name):
     return (
-        f"You are a helpful waste-sorting assistant for Indian households.\n"
-        f"Context: the user has '{label}' (category: '{category}', "
-        f"bin: '{bin_type}', confidence: {conf:.0%}).\n"
-        f"Answer the user's disposal or recycling question.\n"
-        f"CRITICAL: Reply ONLY in {lang_name}. "
-        "2–3 sentences maximum. Plain text, no markdown."
+        f"You are a friendly, knowledgeable neighbour helping someone sort their waste in India.\n"
+        f"They have a '{label}' (category: '{category}', bin: '{bin_type}', confidence: {conf:.0%}).\n"
+        f"Answer their question in a warm, direct, conversational way — like texting a helpful friend.\n"
+        f"Use everyday language. If they're doing something wrong, gently correct them.\n"
+        f"CRITICAL: Reply ONLY in {lang_name}. Keep it to 2–3 sentences. No bullet points, no markdown."
     )
 
 

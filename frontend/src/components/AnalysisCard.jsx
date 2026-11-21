@@ -81,7 +81,7 @@ export default function AnalysisCard({ ana, cls, speaking, onReadAloud, onStop }
         </span>
       </motion.div>
 
-      {/* AI Sees */}
+      {/* AI Sees — now labelled as "About this item" since content is conversational */}
       <motion.div variants={item} style={{ padding: '14px 14px 0', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <div style={{
           width: 30, height: 30, borderRadius: 8, flexShrink: 0,
@@ -91,7 +91,7 @@ export default function AnalysisCard({ ana, cls, speaking, onReadAloud, onStop }
           <Eye size={15} color={binInfo.color} />
         </div>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--tx3)', marginBottom: 3 }}>What the AI sees</div>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--tx3)', marginBottom: 3 }}>About this item</div>
           <div style={{ fontSize: 13.5, color: 'var(--tx)', lineHeight: 1.55 }}>{ana.image_desc || `${cls.class} item`}</div>
         </div>
       </motion.div>
@@ -102,10 +102,10 @@ export default function AnalysisCard({ ana, cls, speaking, onReadAloud, onStop }
         <div style={{ fontSize: 13, color: 'var(--tx2)', lineHeight: 1.5, flex: '1 1 100%' }}>{ana.waste_verdict}</div>
       </motion.div>
 
-      {/* Steps */}
+      {/* Steps — strip "Step N:" prefix since we already show numbered circles */}
       <motion.div variants={item} style={{ padding: '14px 14px 6px' }}>
         <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--tx3)' }}>
-          How to dispose / recycle
+          What to do with it
         </span>
       </motion.div>
       <div style={{ padding: '0 14px 0', display: 'flex', flexDirection: 'column', gap: 9 }}>

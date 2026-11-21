@@ -99,39 +99,7 @@ export default function CameraZone({ img64, clsData, phase, onFile }) {
               )}
             </AnimatePresence>
 
-            {/* Top-3 confidence bar — overlaid at bottom of photo */}
-            <AnimatePresence>
-              {hasResult && clsData?.top3?.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  style={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0,
-                    background: 'rgba(0,0,0,.7)',
-                    backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-                    padding: '8px 14px 10px',
-                    display: 'flex', gap: 10,
-                  }}
-                >
-                  {clsData.top3.map((t, i) => (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                      <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: 'capitalize', opacity: .85, color: '#fff' }}>
-                        {t.class}
-                      </div>
-                      <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,.15)', borderRadius: 999, overflow: 'hidden' }}>
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.round(t.confidence * 100)}%` }}
-                          transition={{ delay: .2 + i * .08, duration: .6, ease: 'easeOut' }}
-                          style={{ height: '100%', background: '#fff', borderRadius: 999 }}
-                        />
-                      </div>
-                      <div style={{ fontSize: 9, opacity: .6, color: '#fff' }}>{Math.round(t.confidence * 100)}%</div>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Top-3 confidence bar REMOVED — shown in composition card below instead */}
           </div>
 
           {/* Result strip — BELOW the photo, never overlapping */}

@@ -101,12 +101,11 @@ export default function App() {
     finally { store.setSpeaking(false) }
   }, [store])
 
-  // ── Language change — retranslate all content ──────────
+  // ── Language change — retranslate + auto-speak in new language ───────────
   const handleLangChange = useCallback(async (newLang) => {
     store.setLang(newLang)
     store.stopSpeaking()
 
-    // If we already have a result, re-fetch analysis in new language
     if (store.clsData && store.anaData) {
       store.setAnaData(null) // show skeleton while re-translating
       try {
@@ -118,6 +117,16 @@ export default function App() {
         store.bumpUsage('chat')
         if (!a.error) {
           store.setAnaData(a)
+
+          // Auto-speak the translated content immediately
+          const steps = Array.isArray(a.steps) ? a.steps : []
+          const introLine = a.image_desc || `This is a ${store.clsData.class}.`
+          const script = introLine + ' ' + steps.map((s, i) =>
+            `Step ${i + 1}: ${String(s).replace(/^step\s*\d+[:.)\-\s]*/i, '')}`
+          ).join('. ')
+          // Small delay so state settles before TTS fires
+          setTimeout(() => triggerTTS(script, true), 300)
+
           // Also retranslate chat history
           if (store.history.length > 0) {
             const newHistory = []
@@ -128,7 +137,7 @@ export default function App() {
                     store.clsData.class, store.clsData.category || store.clsData.class,
                     store.clsData.bin?.type, store.clsData.confidence,
                     newLang.code,
-                    [{ role: 'user', content: `Translate to ${newLang.label}: "${msg.content}"` }]
+                    [{ role: 'user', content: `Translate this to ${newLang.label}, keep the same meaning and tone: "${msg.content}"` }]
                   )
                   store.bumpUsage('chat')
                   newHistory.push({ ...msg, content: r.text || msg.content })
@@ -142,7 +151,7 @@ export default function App() {
         }
       } catch { }
     }
-  }, [store])
+  }, [store, triggerTTS])
 
   // ── Chat send ──────────────────────────────────────────
   const handleChatSend = useCallback(async (text) => {
