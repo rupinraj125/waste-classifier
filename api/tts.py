@@ -3,16 +3,17 @@ POST /api/tts
 body: { "text", "language_code", "speaker", "full", "pace" }
 
 Uses Sarvam bulbul:v3 (universal multi-language voices).
-v4-flash exists but requires language-specific voice IDs (e.g. shubh_hi_ads, ritu_en_customer).
+Auto-fallback: tries SARVAM_API_KEY_FALLBACK if primary key fails with 402/403.
 Pitch and pace are tuned per language for natural emotion.
 bulbul:v3 accepts pitch in range -1.0 to 1.0 (0.0 = neutral).
 """
 from http.server import BaseHTTPRequestHandler
 import json, os, re, urllib.request, urllib.error
 
-KEY   = os.environ.get("SARVAM_API_KEY", "").strip()
-URL   = "https://api.sarvam.ai/text-to-speech"
-MODEL = "bulbul:v3"   # v4-flash requires language-specific voices; v3 is universal
+KEY          = os.environ.get("SARVAM_API_KEY", "").strip()
+KEY_FALLBACK = os.environ.get("SARVAM_API_KEY_FALLBACK", "").strip()
+URL          = "https://api.sarvam.ai/text-to-speech"
+MODEL        = "bulbul:v3"   # v4-flash requires language-specific voices; v3 is universal
 
 # Tuned per language: speaker, pace, pitch
 # pitch:  >0 = higher/brighter,  <0 = deeper/warmer
@@ -50,7 +51,7 @@ def _trim(text: str, full: bool) -> str:
     return out or text[:FAST_LIMIT]
 
 
-def synthesize(text: str, lang: str, speaker: str, pace: float, pitch: float) -> str:
+def synthesize(text: str, lang: str, speaker: str, pace: float, pitch: float, api_key: str) -> str:
     payload = json.dumps({
         "text":               text,
         "language_code":      lang,
@@ -63,7 +64,7 @@ def synthesize(text: str, lang: str, speaker: str, pace: float, pitch: float) ->
 
     req = urllib.request.Request(
         URL, data=payload,
-        headers={"api-subscription-key": KEY, "Content-Type": "application/json"},
+        headers={"api-subscription-key": api_key, "Content-Type": "application/json"},
     )
     with urllib.request.urlopen(req, timeout=20) as r:
         out = json.loads(r.read())
@@ -84,8 +85,9 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            if not KEY:
+            if not KEY and not KEY_FALLBACK:
                 return self._send(503, {"error": "SARVAM_API_KEY not set", "disabled": True})
+            
             n        = int(self.headers.get("content-length", 0))
             d        = json.loads(self.rfile.read(n) or b"{}")
             raw_text = (d.get("text") or "").strip()
@@ -103,10 +105,24 @@ class handler(BaseHTTPRequestHandler):
 
             pace  = float(d.get("pace")  or defaults["pace"])
             pitch = float(d.get("pitch") or defaults["pitch"])
-
             text  = _trim(raw_text, bool(d.get("full")))
-            audio = synthesize(text, lang, speaker, pace, pitch)
-            self._send(200, {"audio": audio, "mime": "audio/mpeg"})
+
+            # Try primary key first
+            current_key = KEY if KEY else KEY_FALLBACK
+            try:
+                audio = synthesize(text, lang, speaker, pace, pitch, current_key)
+                self._send(200, {"audio": audio, "mime": "audio/mpeg"})
+                return
+            except urllib.error.HTTPError as e:
+                # If primary fails with 402 (no credits) or 403 (invalid), try fallback
+                if (e.code == 402 or e.code == 403) and KEY_FALLBACK and current_key != KEY_FALLBACK:
+                    try:
+                        audio = synthesize(text, lang, speaker, pace, pitch, KEY_FALLBACK)
+                        self._send(200, {"audio": audio, "mime": "audio/mpeg", "fallback": True})
+                        return
+                    except:
+                        pass  # fallback also failed, raise original error
+                raise  # re-raise original error if no fallback or fallback failed
 
         except urllib.error.HTTPError as e:
             err = e.read().decode()[:300]

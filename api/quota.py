@@ -8,6 +8,7 @@ import json, os, urllib.request, urllib.error
 GROQ_KEY   = os.environ.get("GROQ_API_KEY", "").strip()
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 SARVAM_KEY = os.environ.get("SARVAM_API_KEY", "").strip()
+SARVAM_KEY_FALLBACK = os.environ.get("SARVAM_API_KEY_FALLBACK", "").strip()
 
 
 def check_groq():
@@ -38,10 +39,50 @@ def check_gemini():
 
 
 def check_sarvam():
-    """Sarvam AI — test with minimal call to verify key and check credits."""
-    if not SARVAM_KEY:
-        return {"error": "No API key", "status": "inactive"}
+    """Sarvam AI — test primary + fallback keys."""
+    if not SARVAM_KEY and not SARVAM_KEY_FALLBACK:
+        return {"error": "No API keys configured", "status": "inactive"}
     
+    results = []
+    
+    # Check primary key
+    if SARVAM_KEY:
+        status = _test_sarvam_key(SARVAM_KEY, "Primary")
+        results.append(status)
+    
+    # Check fallback key
+    if SARVAM_KEY_FALLBACK:
+        status = _test_sarvam_key(SARVAM_KEY_FALLBACK, "Fallback")
+        results.append(status)
+    
+    # Return combined status
+    active_count = sum(1 for r in results if r.get("status") == "active")
+    
+    if active_count == len(results):
+        keys_label = f"{len(results)} key{'s' if len(results) > 1 else ''}"
+        return {
+            "status": "active",
+            "plan": "Pay-as-you-go",
+            "model": "bulbul:v3",
+            "note": f"✅ All {keys_label} active",
+        }
+    elif active_count > 0:
+        return {
+            "status": "active",
+            "plan": "Pay-as-you-go",
+            "model": "bulbul:v3",
+            "note": f"✅ {active_count}/{len(results)} key(s) active (fallback available)",
+        }
+    else:
+        return {
+            "error": results[0].get("error", "All keys exhausted"),
+            "status": "inactive",
+            "note": "Add credits at dashboard.sarvam.ai",
+        }
+
+
+def _test_sarvam_key(api_key: str, label: str):
+    """Test a single Sarvam key."""
     try:
         url = "https://api.sarvam.ai/text-to-speech"
         payload = json.dumps({
@@ -53,41 +94,32 @@ def check_sarvam():
         req = urllib.request.Request(
             url, data=payload,
             headers={
-                "api-subscription-key": SARVAM_KEY,
+                "api-subscription-key": api_key,
                 "Content-Type": "application/json",
             },
         )
         with urllib.request.urlopen(req, timeout=10) as r:
             resp = json.loads(r.read())
-            # Successful — key active
-            return {
-                "status": "active",
-                "plan": "Pay-as-you-go",
-                "model": "bulbul:v3",
-                "note": "Check dashboard.sarvam.ai for credits",
-            }
+            if resp.get("audios"):
+                return {"status": "active", "label": label}
+            return {"status": "unknown", "error": "No audio", "label": label}
     except urllib.error.HTTPError as e:
         err_body = e.read().decode()[:300]
         if e.code == 401 or e.code == 403:
-            return {"error": "Invalid or expired API key", "status": "inactive"}
+            return {"status": "inactive", "error": "Invalid key", "label": label}
         elif e.code == 402:
-            # No credits — parse the error message
             try:
                 err_json = json.loads(err_body)
                 err_msg = err_json.get("error", {}).get("message", "No credits")
             except:
                 err_msg = "Insufficient credits"
-            return {
-                "error": err_msg,
-                "status": "inactive",
-                "note": "Add credits at dashboard.sarvam.ai",
-            }
+            return {"status": "inactive", "error": err_msg, "label": label}
         elif e.code == 429:
-            return {"error": "Rate limit exceeded", "status": "limited"}
+            return {"status": "limited", "error": "Rate limit", "label": label}
         else:
-            return {"error": f"HTTP {e.code}", "status": "unknown", "note": err_body[:100]}
+            return {"status": "unknown", "error": f"HTTP {e.code}", "label": label}
     except Exception as e:
-        return {"error": str(e)[:100], "status": "unknown"}
+        return {"status": "unknown", "error": str(e)[:100], "label": label}
 
 
 class handler(BaseHTTPRequestHandler):
